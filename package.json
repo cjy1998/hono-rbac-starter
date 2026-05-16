@@ -16,6 +16,8 @@
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.16",
     "mysql2": "^3.22.3",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
