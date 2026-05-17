@@ -1,10 +1,14 @@
-import type { usersTable } from "../db/schema.js";
+import type { usersTable } from "../db/schema/users.js";
 
 type UserPO = typeof usersTable.$inferSelect;
 
 export interface UserVO {
-  id: number;
-  name: string;
+  id: string;
+  username: string;
+  nickname: string;
+  phone: string;
+  avatar: string;
+  status: number;
   email: string;
   createdAt: string;
   updatedAt: string;
@@ -12,7 +16,11 @@ export interface UserVO {
 
 export const toUserVO = (user: UserPO): UserVO => ({
   id: user.id,
-  name: user.name,
+  username: user.username,
+  nickname: user.nickname,
+  phone: user.phone,
+  avatar: user.avatar,
+  status: user.status,
   email: user.email,
   createdAt: user.createdAt.toISOString(),
   updatedAt: user.updatedAt.toISOString(),

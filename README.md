@@ -10,6 +10,7 @@
 - [Winston](https://github.com/winstonjs/winston) + [winston-daily-rotate-file](https://github.com/winstonjs/winston-daily-rotate-file) - 结构化日志、按日期切分、自动 gzip 压缩
 - 分层架构：`controller / server / dto / vo / db / middleware`
 - 统一异常处理 + 统一响应格式 + 请求级 `requestId` 链路追踪
+- 完整 RBAC 表结构：用户 / 角色 / 权限 / 菜单四实体 + 三张关联表
 
 > 想看完整的实现思路与每个模块的讲解？请阅读 [`TUTORIAL.md`](./TUTORIAL.md)。
 
@@ -23,9 +24,21 @@ hono-test/
 ├── logs/                    运行时日志（gitignore，按日期切分 + gzip 压缩）
 ├── src/
 │   ├── index.ts             应用入口（路由挂载、全局异常、请求日志）
-│   ├── controller/          接口层
+│   ├── controller/           接口层
 │   ├── server/              业务层
 │   ├── db/                  drizzle 实例 + schema
+│   │   ├── index.ts         drizzle 连接实例
+│   │   ├── seed.ts          初始化数据脚本
+│   │   ├── schema/          表结构定义（每个实体或关系一张文件）
+│   │   │   ├── common.ts      所有表的公共字段（id / createdAt / updatedAt / deletedAt）
+│   │   │   ├── users.ts       用户表
+│   │   │   ├── roles.ts       角色表
+│   │   │   ├── permissions.ts  权限表（按钮/API）
+│   │   │   ├── menus.ts       菜单表（从权限表分离）
+│   │   │   ├── user_role.ts    用户-角色 关联表
+│   │   │   ├── role_permission.ts  角色-权限 关联表
+│   │   │   └── role_menu.ts    角色-菜单 关联表
+│   │   └── relations.ts      所有表之间的关系定义
 │   ├── dto/                 入参 + zod schema
 │   ├── vo/                  出参视图对象
 │   ├── middleware/          jwtAuth / zValidator / requestLogger
@@ -40,12 +53,112 @@ hono-test/
 
 ---
 
+## 数据库设计（RBAC）
+
+本项目实现了完整的 **RBAC（基于角色的访问控制）** 表结构，包含 7 张表：
+
+```mermaid
+erDiagram
+    users {
+        string id PK "UUID，主键"
+        string username UK "用户名，唯一"
+        string nickname "昵称"
+        string password "Argon2 加密后的密码"
+        string email UK "邮箱，唯一"
+        string phone "手机号"
+        string avatar "头像 URL"
+        tinyint status "0-禁用 1-启用"
+        timestamp createdAt "创建时间"
+        timestamp updatedAt "更新时间"
+        timestamp deletedAt "软删除时间，可为空"
+    }
+
+    roles {
+        string id PK "UUID，主键"
+        string roleName "角色名称"
+        string roleCode UK "角色编码，唯一"
+        int sortOrder "排序，越小越靠前"
+        tinyint status "0-禁用 1-启用"
+        string remark "备注"
+        timestamp createdAt "创建时间"
+        timestamp updatedAt "更新时间"
+        timestamp deletedAt "软删除时间"
+    }
+
+    permissions {
+        string id PK "UUID，主键"
+        string permissionName "权限名称，如'用户列表'"
+        string permissionCode UK "权限编码，如'user:list'，唯一"
+        tinyint permissionType "1-按钮/操作 2-API 3-数据权限"
+        string resource "API 资源路径（permissionType=2 时使用）"
+        string method "HTTP 方法"
+        tinyint status "0-禁用 1-启用"
+        string remark "备注"
+        timestamp createdAt "创建时间"
+        timestamp updatedAt "更新时间"
+        timestamp deletedAt "软删除时间"
+    }
+
+    menus {
+        string id PK "UUID，主键"
+        string parentId "父菜单 ID，顶级为 '0'"
+        string menuName "菜单名称"
+        tinyint menuType "1-目录 2-菜单 3-外链"
+        string path "路由路径"
+        string component "前端组件路径"
+        string icon "图标"
+        string redirect "重定向地址"
+        string permissionCode "关联的权限编码"
+        tinyint visible "0-隐藏 1-显示"
+        tinyint keepAlive "0-不缓存 1-缓存"
+        int sortOrder "排序"
+        tinyint status "0-禁用 1-启用"
+        timestamp createdAt "创建时间"
+        timestamp updatedAt "更新时间"
+        timestamp deletedAt "软删除时间"
+    }
+
+    user_role {
+        string userId PK,FK "关联 user 的 UUID"
+        string roleId PK,FK "关联 role 的 UUID"
+        timestamp createdAt "创建时间"
+    }
+
+    role_permission {
+        string roleId PK,FK "关联 role 的 UUID"
+        string permissionId PK,FK "关联 permission 的 UUID"
+        timestamp createdAt "创建时间"
+    }
+
+    role_menu {
+        string roleId PK,FK "关联 role 的 UUID"
+        string menuId PK,FK "关联 menu 的 UUID"
+        timestamp createdAt "创建时间"
+    }
+
+    users ||--o{ user_role : "一个用户可以有多个角色"
+    roles ||--o{ user_role : "一个角色可以分配给多个用户"
+    roles ||--o{ role_permission : "一个角色可以拥有多个权限"
+    permissions ||--o{ role_permission : "一个权限可以分配给多个角色"
+    roles ||--o{ role_menu : "一个角色可以关联多个菜单"
+    menus ||--o{ role_menu : "一个菜单可以分配给多个角色"
+```
+
+**设计要点**：
+
+- 所有主键均使用 **UUID v4**（`char(36)`），跨环境迁移不易冲突
+- 所有表均包含 `createdAt / updatedAt / deletedAt`（软删除），通过 `commonSchema` 统一定义
+- **菜单从权限表分离**：菜单（menus）专注于前端路由与组件，权限（permissions）专注于按钮操作与 API 鉴权，解除耦合
+- 三张关联表（user_role / role_permission / role_menu）均无 id 主键，使用联合主键（roleId + XxxId）
+
+---
+
 ## 快速开始
 
 ### 1. 环境要求
 
-- Node.js ≥ 20
-- MySQL ≥ 8.0
+- Node.js >= 20
+- MySQL >= 8.0
 - 推荐使用 [pnpm](https://pnpm.io/)
 
 ### 2. 安装依赖
@@ -78,11 +191,14 @@ JWT_EXPIRES_IN=24h
 # 提前在 MySQL 里建库
 mysql -uroot -p -e "CREATE DATABASE hono_test DEFAULT CHARSET utf8mb4;"
 
-# 根据 src/db/schema.ts 生成迁移 SQL
+# 根据 src/db/schema/ 生成迁移 SQL
 pnpm db:g
 
 # 把迁移应用到数据库
 pnpm db:m
+
+# 初始化种子数据（角色/权限/菜单/超级管理员账号）
+pnpm db:seed
 ```
 
 ### 5. 启动开发服务
@@ -97,24 +213,36 @@ pnpm dev
 
 ## NPM 脚本
 
-| 命令         | 说明                                         |
-| ------------ | -------------------------------------------- |
-| `pnpm dev`   | `tsx watch src/index.ts`，开发模式 + 热更新  |
-| `pnpm build` | `tsc`，编译 TypeScript 到 `dist/`            |
-| `pnpm start` | `node dist/index.js`，运行编译后的产物       |
-| `pnpm db:g`  | `drizzle-kit generate`，根据 schema 生成迁移 |
-| `pnpm db:m`  | `drizzle-kit migrate`，把迁移应用到 MySQL    |
+| 命令           | 说明                                                        |
+| -------------- | ----------------------------------------------------------- |
+| `pnpm dev`     | `tsx watch src/index.ts`，开发模式 + 热更新                 |
+| `pnpm build`   | `tsc`，编译 TypeScript 到 `dist/`                           |
+| `pnpm start`   | `node dist/index.js`，运行编译后的产物                      |
+| `pnpm db:g`    | `drizzle-kit generate`，根据 schema 生成迁移                |
+| `pnpm db:m`    | `drizzle-kit migrate`，把迁移应用到 MySQL                   |
+| `pnpm db:seed` | `tsx src/db/seed.ts`，初始化种子数据（角色/权限/菜单/用户） |
+
+---
+
+## 初始账号
+
+执行 `pnpm db:seed` 后会自动插入以下账号：
+
+| 角色       | 用户名  | 密码          | 说明                    |
+| ---------- | ------- | ------------- | ----------------------- |
+| 超级管理员 | `admin` | `admin123456` | 拥有全部权限和菜单      |
+| 普通用户   | `user`  | `user123456`  | 仅可访问 Dashboard 页面 |
 
 ---
 
 ## API 一览
 
-| Method | Path          | 鉴权 | 入参                               | 说明                    |
-| ------ | ------------- | ---- | ---------------------------------- | ----------------------- |
-| POST   | `/user/login` | -    | `{ email, password }` (json)       | 登录，返回 user + token |
-| POST   | `/user`       | JWT  | `{ name, email, password }` (json) | 创建用户                |
-| GET    | `/user`       | JWT  | `?page&pageSize&keyword` (query)   | 分页 + 关键字搜索       |
-| GET    | `/user/:id`   | JWT  | `id` (param)                       | 查询单个用户            |
+| Method | Path          | 鉴权 | 入参                                             | 说明                    |
+| ------ | ------------- | ---- | ------------------------------------------------ | ----------------------- |
+| POST   | `/user/login` | -    | `{ email, password }` (json)                     | 登录，返回 user + token |
+| POST   | `/user`       | JWT  | `{ username, nickname, email, password }` (json) | 创建用户                |
+| GET    | `/user`       | JWT  | `?page&pageSize&keyword` (query)                 | 分页 + 关键字搜索       |
+| GET    | `/user/:id`   | JWT  | `id` (param，UUID 格式)                          | 查询单个用户            |
 
 > 所有接口的响应都遵循统一格式：
 >
@@ -134,20 +262,16 @@ pnpm dev
 # 1. 登录
 curl -X POST http://localhost:3000/user/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"a@b.com","password":"123456"}'
+  -d '{"email":"admin@example.com","password":"admin123456"}'
 
 # 2. 带 token 访问受保护接口
 curl http://localhost:3000/user \
   -H 'Authorization: Bearer <第一步拿到的 token>'
 
-# 3. 创建用户
-curl -X POST http://localhost:3000/user \
-  -H 'Authorization: Bearer <token>' \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"alice","email":"alice@example.com","password":"123456"}'
+# 3. 查询单个用户（id 为 UUID）
+curl http://localhost:3000/user/<uuid> \
+  -H 'Authorization: Bearer <token>'
 ```
-
-> 第一次使用时，`POST /user` 也需要 token。可临时去掉路由上的 `jwtAuth` 创建第一个用户，或在 MySQL 中手动插入一条（密码记得用 `argon2.hash` 加密）。生产环境推荐新增一个公开的 `/user/register` 接口替代。
 
 ---
 

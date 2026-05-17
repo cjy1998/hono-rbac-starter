@@ -69,7 +69,7 @@ userController.post("/login", zValidator("json", loginSchema), async (c) => {
   }
   const payload = {
     id: user.id,
-    name: user.name,
+    username: user.username,
     email: user.email,
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 24小时后过期
   };

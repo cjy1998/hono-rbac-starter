@@ -1,6 +1,6 @@
 import { eq, like, or } from "drizzle-orm";
 import db from "../db/index.js";
-import { usersTable } from "../db/schema.js";
+import { usersTable } from "../db/schema/users.js";
 import type { CreateUserDTO, UserQueryDTO } from "../dto/user.dto.js";
 
 class UserServer {
@@ -8,7 +8,7 @@ class UserServer {
     const { page, pageSize, keyword } = query;
     const where = keyword
       ? or(
-          like(usersTable.name, `%${keyword}%`),
+          like(usersTable.username, `%${keyword}%`),
           like(usersTable.email, `%${keyword}%`),
         )
       : undefined;
@@ -21,7 +21,7 @@ class UserServer {
       .offset((page - 1) * pageSize);
   }
 
-  async getUserById(id: number) {
+  async getUserById(id: string) {
     const rows = await db
       .select()
       .from(usersTable)
