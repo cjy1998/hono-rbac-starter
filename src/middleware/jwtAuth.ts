@@ -7,6 +7,7 @@ import {
   JwtTokenInvalid,
   JwtTokenSignatureMismatched,
 } from "hono/utils/jwt/types";
+import { env } from "../env.js";
 
 export const jwtAuth = createMiddleware(async (c, next) => {
   const token = c.req.header("Authorization")?.split(" ")[1];
@@ -15,14 +16,9 @@ export const jwtAuth = createMiddleware(async (c, next) => {
       message: "token is required",
     });
   }
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new HTTPException(HTTP_STATUS.INTERNAL_SERVER_ERROR, {
-      message: "JWT_SECRET is not configured",
-    });
-  }
+
   try {
-    const payload = await verify(token, secret, "HS256");
+    const payload = await verify(token, env.JWT_SECRET, "HS256");
     c.set("user", payload);
   } catch (err) {
     if (err instanceof JwtTokenExpired) {

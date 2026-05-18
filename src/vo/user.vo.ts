@@ -1,4 +1,5 @@
 import type { usersTable } from "../db/schema/users.js";
+import type { RoleVO } from "./roles.vo.js";
 
 type UserPO = typeof usersTable.$inferSelect;
 
@@ -25,6 +26,10 @@ export const toUserVO = (user: UserPO): UserVO => ({
   createdAt: user.createdAt.toISOString(),
   updatedAt: user.updatedAt.toISOString(),
 });
+
+export interface UserWithRolesVO extends UserVO {
+  roles: RoleVO[];
+}
 
 export interface UserListVO {
   list: UserVO[];

@@ -22,13 +22,14 @@
 hono-test/
 ├── drizzle/                 drizzle-kit 生成的迁移 SQL
 ├── logs/                    运行时日志（gitignore，按日期切分 + gzip 压缩）
+|── scripts/
+|   ├── seed.ts          初始化数据脚本
 ├── src/
 │   ├── index.ts             应用入口（路由挂载、全局异常、请求日志）
 │   ├── controller/           接口层
 │   ├── server/              业务层
 │   ├── db/                  drizzle 实例 + schema
 │   │   ├── index.ts         drizzle 连接实例
-│   │   ├── seed.ts          初始化数据脚本
 │   │   ├── schema/          表结构定义（每个实体或关系一张文件）
 │   │   │   ├── common.ts      所有表的公共字段（id / createdAt / updatedAt / deletedAt）
 │   │   │   ├── users.ts       用户表
@@ -213,14 +214,14 @@ pnpm dev
 
 ## NPM 脚本
 
-| 命令           | 说明                                                        |
-| -------------- | ----------------------------------------------------------- |
-| `pnpm dev`     | `tsx watch src/index.ts`，开发模式 + 热更新                 |
-| `pnpm build`   | `tsc`，编译 TypeScript 到 `dist/`                           |
-| `pnpm start`   | `node dist/index.js`，运行编译后的产物                      |
-| `pnpm db:g`    | `drizzle-kit generate`，根据 schema 生成迁移                |
-| `pnpm db:m`    | `drizzle-kit migrate`，把迁移应用到 MySQL                   |
-| `pnpm db:seed` | `tsx src/db/seed.ts`，初始化种子数据（角色/权限/菜单/用户） |
+| 命令           | 说明                                                         |
+| -------------- | ------------------------------------------------------------ |
+| `pnpm dev`     | `tsx watch src/index.ts`，开发模式 + 热更新                  |
+| `pnpm build`   | `tsc`，编译 TypeScript 到 `dist/`                            |
+| `pnpm start`   | `node dist/index.js`，运行编译后的产物                       |
+| `pnpm db:g`    | `drizzle-kit generate`，根据 schema 生成迁移                 |
+| `pnpm db:m`    | `drizzle-kit migrate`，把迁移应用到 MySQL                    |
+| `pnpm db:seed` | `tsx scripts/seed.ts`，初始化种子数据（角色/权限/菜单/用户） |
 
 ---
 

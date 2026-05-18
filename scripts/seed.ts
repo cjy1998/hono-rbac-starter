@@ -1,14 +1,14 @@
 import "dotenv/config";
 import argon2 from "argon2";
 import { v4 as uuidv4 } from "uuid";
-import db from "./index.js";
-import { menusTable } from "./schema/menus.js";
-import { permissionsTable } from "./schema/permissions.js";
-import { roleMenuTable } from "./schema/role_menu.js";
-import { rolePermissionTable } from "./schema/role_permission.js";
-import { rolesTable } from "./schema/roles.js";
-import { userRoleTable } from "./schema/user_role.js";
-import { usersTable } from "./schema/users.js";
+import db from "../src/db/index.js";
+import { menusTable } from "../src/db/schema/menus.js";
+import { permissionsTable } from "../src/db/schema/permissions.js";
+import { roleMenuTable } from "../src/db/schema/role_menu.js";
+import { rolePermissionTable } from "../src/db/schema/role_permission.js";
+import { rolesTable } from "../src/db/schema/roles.js";
+import { userRoleTable } from "../src/db/schema/user_role.js";
+import { usersTable } from "../src/db/schema/users.js";
 
 /**
  * 角色定义
