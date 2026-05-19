@@ -12,12 +12,14 @@ import { toUserVO } from "../vo/user.vo.js";
 import { fail, ok } from "../utils/response.js";
 import argon2 from "argon2";
 import { jwtAuth } from "../middleware/jwtAuth.js";
+import { roleAuth } from "../middleware/roleAuth.js";
 
 const userController = new Hono();
 
 userController.get(
   "/",
   jwtAuth,
+  roleAuth,
   zValidator("query", userQuerySchema),
   async (c) => {
     const query = c.req.valid("query");

@@ -8,7 +8,7 @@ import { toUserVO, type UserWithRolesVO } from "../vo/user.vo.js";
 import { toRoleVO } from "../vo/roles.vo.js";
 import { HTTP_STATUS } from "../utils/const.js";
 import { env } from "../env.js";
-
+import type { UserPayload } from "../types/hono.js";
 class UserService {
   async getUsers(query: UserQueryDTO) {
     const { page, pageSize, keyword } = query;
@@ -64,18 +64,28 @@ class UserService {
     return rows[0];
   }
 
-  async login(dto: LoginDTO): Promise<
+  async login(
+    dto: LoginDTO,
+  ): Promise<
     | { success: true; user: UserWithRolesVO; token: string }
     | { success: false; errorCode: number; message: string }
   > {
     const user = await this.getUserByEmail(dto.email);
     if (!user) {
-      return { success: false, errorCode: HTTP_STATUS.NOT_FOUND, message: "用户不存在" };
+      return {
+        success: false,
+        errorCode: HTTP_STATUS.NOT_FOUND,
+        message: "用户不存在",
+      };
     }
 
     const isPasswordValid = await argon2.verify(user.password, dto.password);
     if (!isPasswordValid) {
-      return { success: false, errorCode: HTTP_STATUS.UNAUTHORIZED, message: "密码不正确" };
+      return {
+        success: false,
+        errorCode: HTTP_STATUS.UNAUTHORIZED,
+        message: "密码不正确",
+      };
     }
 
     const userWithRoles = await this.getUserWithRoles(user.id);
@@ -84,11 +94,12 @@ class UserService {
       roles: userWithRoles?.userRoles.map((ur) => toRoleVO(ur.role)) ?? [],
     };
 
-    const payload = {
+    // JWT 只存必要字段，权限在 roleAuth 中间件中按需查库
+    const payload: UserPayload = {
       id: user.id,
       username: user.username,
       email: user.email,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 24小时后过期
     };
     const token = await sign(payload, env.JWT_SECRET);
 
