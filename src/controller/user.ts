@@ -34,11 +34,22 @@ userController.get(
   zValidator("param", userIdParamSchema),
   async (c) => {
     const { id } = c.req.valid("param");
+    const redis = c.get("redis");
+    const cacheKey = `user:${id}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return ok(c, JSON.parse(cached));
+    }
+
     const user = await userService.getUserById(id);
     if (!user) {
       throw new HTTPException(404, { message: "用户不存在" });
     }
-    return ok(c, toUserVO(user));
+
+    const userVO = toUserVO(user);
+    await redis.set(cacheKey, JSON.stringify(userVO), "EX", 3600);
+    return ok(c, userVO);
   },
 );
 

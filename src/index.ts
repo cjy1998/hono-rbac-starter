@@ -11,12 +11,21 @@ import { HTTP_STATUS } from "./utils/const.js";
 import { logger } from "./utils/logger.js";
 import { fail } from "./utils/response.js";
 import { env } from "./env.js";
+import { redisMiddleware } from "./middleware/redis.middleware.js";
 
 // 传入 AppEnv 让 c.set/c.get/c.var 获得强类型
 const app = new Hono<AppEnv>();
-
+/**
+ * 请求日志中间件
+ */
 app.use("*", requestLogger);
-
+/**
+ * Redis 缓存中间件
+ */
+app.use("*", redisMiddleware);
+/**
+ * 错误处理
+ */
 app.onError((err, c) => {
   const requestId = c.get("requestId");
   if (err instanceof ValidationException) {

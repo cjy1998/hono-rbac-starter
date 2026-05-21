@@ -5,6 +5,8 @@
  * 拥有强类型，避免出现 "类型 string 的参数不能赋给类型 never" 的报错。
  */
 
+import type { Redis } from "ioredis";
+
 /** JWT payload 中存储的用户信息 */
 export type UserPayload = {
   id: string;
@@ -19,5 +21,7 @@ export type AppEnv = {
     requestId: string;
     /** JWT 解析出来的 payload，由 jwtAuth 中间件写入 */
     user?: UserPayload;
+    /** Redis 客户端，由 redisMiddleware 中间件写入 */
+    redis: Redis;
   };
 };

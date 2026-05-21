@@ -1,6 +1,7 @@
 /**
  * 角色鉴权中间件
  * 根据 user.id 查库获取角色和权限，匹配当前请求的 path + method
+ * 角色和权限均有 Redis 缓存，TTL 5 分钟
  */
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
@@ -10,6 +11,12 @@ import userService from "../service/user.js";
 import permissionsService from "../service/permissions.js";
 
 const SUPER_ADMIN_CODE = "super_admin";
+const ROLES_TTL = 300; // 5 分钟
+
+type UserWithRoles = Awaited<ReturnType<typeof userService.getUserWithRoles>>;
+type Permissions = Awaited<
+  ReturnType<typeof permissionsService.getPermissionsByRoleIds>
+>;
 
 export const roleAuth = createMiddleware<AppEnv>(async (c, next) => {
   const user = c.get("user");
@@ -19,8 +26,19 @@ export const roleAuth = createMiddleware<AppEnv>(async (c, next) => {
     });
   }
 
-  // 1. 查用户角色
-  const userWithRoles = await userService.getUserWithRoles(user.id);
+  const redis = c.get("redis");
+
+  // 1. 查用户角色（优先读缓存）
+  const rolesKey = `user:roles:${user.id}`;
+  let userWithRoles: UserWithRoles;
+  const cachedRoles = await redis.get(rolesKey);
+  if (cachedRoles) {
+    userWithRoles = JSON.parse(cachedRoles) as UserWithRoles;
+  } else {
+    userWithRoles = await userService.getUserWithRoles(user.id);
+    await redis.set(rolesKey, JSON.stringify(userWithRoles), "EX", ROLES_TTL);
+  }
+
   const roleIds = userWithRoles?.userRoles.map((ur) => ur.role.id) ?? [];
 
   // 2. 超级管理员直接放行
@@ -33,8 +51,21 @@ export const roleAuth = createMiddleware<AppEnv>(async (c, next) => {
     return;
   }
 
-  // 3. 查角色对应的权限（已去重）
-  const permissions = await permissionsService.getPermissionsByRoleIds(roleIds);
+  // 3. 查角色对应的权限（优先读缓存，按 roleId 排序保证 key 稳定）
+  const permissionsKey = `permissions:roles:${[...roleIds].sort().join(",")}`;
+  let permissions: Permissions;
+  const cachedPermissions = await redis.get(permissionsKey);
+  if (cachedPermissions) {
+    permissions = JSON.parse(cachedPermissions) as Permissions;
+  } else {
+    permissions = await permissionsService.getPermissionsByRoleIds(roleIds);
+    await redis.set(
+      permissionsKey,
+      JSON.stringify(permissions),
+      "EX",
+      ROLES_TTL,
+    );
+  }
 
   // 4. 匹配当前请求的 path + method
   const { method } = c.req;

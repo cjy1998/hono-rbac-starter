@@ -5,12 +5,19 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
+  REDIS_HOST: z.string().min(1, "REDIS_HOST is required"),
+  REDIS_PORT: z.coerce.number().int().positive().default(6379),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.coerce.number().int().default(0),
 });
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error("❌ Invalid environment variables:", parsed.error.flatten().fieldErrors);
+  console.error(
+    "❌ Invalid environment variables:",
+    parsed.error.flatten().fieldErrors,
+  );
   process.exit(1);
 }
 
