@@ -5,7 +5,7 @@ export const usersTable = mysqlTable(
   "users",
   {
     ...commonSchema,
-    username: varchar({ length: 64 }).notNull().unique(),
+    username: varchar({ length: 64 }).notNull(),
     nickname: varchar({ length: 64 }).notNull(),
     password: varchar({ length: 255 }).notNull(),
     email: varchar({ length: 128 }).notNull().unique(),

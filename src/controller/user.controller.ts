@@ -5,7 +5,8 @@ import userService from "../service/user.service.js";
 import {
   createUserSchema,
   loginSchema,
-  userIdParamSchema,
+  updatePasswordSchema,
+  updateUserSchema,
   userQuerySchema,
 } from "../dto/user.dto.js";
 import { toUserVO } from "../vo/user.vo.js";
@@ -13,9 +14,53 @@ import { fail, ok } from "../utils/response.js";
 import argon2 from "argon2";
 import { jwtAuth } from "../middleware/jwtAuth.middleware.js";
 import { roleAuth } from "../middleware/roleAuth.middleware.js";
+import { idSchema } from "../dto/common.dto.js";
 
 const userController = new Hono();
-
+/**
+ * 创建用户
+ */
+userController.post(
+  "/",
+  jwtAuth,
+  zValidator("json", createUserSchema),
+  async (c) => {
+    const user = c.req.valid("json");
+    const result = await userService.createUser(user);
+    return ok(c, result);
+  },
+);
+/**
+ * 删除用户
+ */
+userController.delete(
+  "/:id",
+  jwtAuth,
+  zValidator("param", idSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const result = await userService.deleteUser(id);
+    return ok(c, result);
+  },
+);
+/**
+ * 更新用户
+ */
+userController.put(
+  "/:id",
+  jwtAuth,
+  zValidator("param", idSchema),
+  zValidator("json", updateUserSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const dto = c.req.valid("json");
+    const result = await userService.updateUser(id, dto);
+    return ok(c, result);
+  },
+);
+/**
+ * 获取用户列表
+ */
 userController.get(
   "/",
   jwtAuth,
@@ -28,44 +73,41 @@ userController.get(
   },
 );
 
+/**
+ * 获取单个用户
+ */
 userController.get(
   "/:id",
   jwtAuth,
-  zValidator("param", userIdParamSchema),
+  zValidator("param", idSchema),
   async (c) => {
     const { id } = c.req.valid("param");
     const redis = c.get("redis");
     const cacheKey = `user:${id}`;
-
     const cached = await redis.get(cacheKey);
     if (cached) {
       return ok(c, JSON.parse(cached));
     }
-
     const user = await userService.getUserById(id);
-    if (!user) {
-      throw new HTTPException(404, { message: "用户不存在" });
-    }
-
-    const userVO = toUserVO(user);
-    await redis.set(cacheKey, JSON.stringify(userVO), "EX", 3600);
-    return ok(c, userVO);
+    await redis.set(cacheKey, JSON.stringify(user), "EX", 3600);
+    return ok(c, user);
   },
 );
-
-userController.post(
-  "/",
+/**
+ * 修改密码
+ */
+userController.put(
+  "/:id/password",
   jwtAuth,
-  zValidator("json", createUserSchema),
+  zValidator("param", idSchema),
+  zValidator("json", updatePasswordSchema),
   async (c) => {
+    const { id } = c.req.valid("param");
     const dto = c.req.valid("json");
-    const storageHash = await argon2.hash(dto.password);
-    const newUser = { ...dto, password: storageHash };
-    const result = await userService.createUser(newUser);
+    const result = await userService.updatePassword(id, dto);
     return ok(c, result);
   },
 );
-
 /**
  * 登录 - 返回用户信息（含角色）+ token
  */
