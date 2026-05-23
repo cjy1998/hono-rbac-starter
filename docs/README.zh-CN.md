@@ -32,7 +32,7 @@ hono-test/
 │   ├── redis.ts             Redis 连接实例（ioredis）
 │   ├── controller/           接口层
 │   ├── service/             业务层
-│   │   ├── user.ts           用户业务
+│   │   ├── user.service.ts    用户业务
 │   │   └── permissions.ts    权限/角色查询服务（供 roleAuth 使用）
 │   ├── db/                  drizzle 实例 + schema
 │   │   ├── index.ts         drizzle 连接实例
@@ -47,11 +47,20 @@ hono-test/
 │   │   │   └── role_menu.ts    角色-菜单 关联表
 │   │   └── relations.ts      所有表之间的关系定义
 │   ├── dto/                 入参 + zod schema
+│   │   ├── common.dto.ts     公共分页 DTO
+│   │   └── user.dto.ts       用户 DTO
 │   ├── vo/                  出参视图对象
+│   │   ├── common.vo.ts      公共分页 VO
+│   │   ├── roles.vo.ts       角色 VO
+│   │   └── user.vo.ts        用户 VO
 │   ├── middleware/          jwtAuth / roleAuth / redis.middleware / zValidator / requestLogger
 │   ├── exceptions/          自定义异常
 │   ├── types/               Hono Variables 等共享类型
-│   ├── utils/               常量、统一响应、logger
+│   ├── utils/               常量、统一响应、logger、查询工具
+│   │   ├── const.ts          HTTP_STATUS 常量
+│   │   ├── logger.ts         Winston logger
+│   │   ├── query.ts          公共查询工具（notDeleted、paginate）
+│   │   └── response.ts       统一响应 ok / fail
 │   └── env.d.ts             process.env 类型
 ├── drizzle.config.ts
 ├── tsconfig.json

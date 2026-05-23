@@ -7,8 +7,8 @@ import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { HTTP_STATUS } from "../utils/const.js";
 import type { AppEnv } from "../types/hono.js";
-import userService from "../service/user.js";
-import permissionsService from "../service/permissions.js";
+import userService from "../service/user.service.js";
+import permissionsService from "../service/permissions.service.js";
 
 const SUPER_ADMIN_CODE = "super_admin";
 const ROLES_TTL = 300; // 5 分钟

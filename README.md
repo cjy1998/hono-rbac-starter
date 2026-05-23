@@ -32,7 +32,7 @@ hono-test/
 │   ├── redis.ts             Redis connection instance (ioredis)
 │   ├── controller/           Controller layer
 │   ├── service/             Business layer
-│   │   ├── user.ts           User business logic
+│   │   ├── user.service.ts    User business logic
 │   │   └── permissions.ts    Permission/role query service (used by roleAuth)
 │   ├── db/                  Drizzle instance + schema
 │   │   ├── index.ts         Drizzle connection instance
@@ -47,11 +47,20 @@ hono-test/
 │   │   │   └── role_menu.ts    Role-Menu association table
 │   │   └── relations.ts      Relation definitions among all tables
 │   ├── dto/                 Request DTOs + zod schemas
+│   │   ├── common.dto.ts     Common pagination DTO
+│   │   └── user.dto.ts       User DTOs
 │   ├── vo/                  Response view objects
+│   │   ├── common.vo.ts      Common pagination VO
+│   │   ├── roles.vo.ts       Roles VO
+│   │   └── user.vo.ts        User VO
 │   ├── middleware/          jwtAuth / roleAuth / redis.middleware / zValidator / requestLogger
 │   ├── exceptions/          Custom exceptions
 │   ├── types/               Shared types such as Hono Variables
-│   ├── utils/               Constants, unified response, logger
+│   ├── utils/               Constants, unified response, logger, query utilities
+│   │   ├── const.ts          HTTP status constants
+│   │   ├── logger.ts         Winston logger
+│   │   ├── query.ts          Common query utilities (notDeleted, paginate)
+│   │   └── response.ts       Unified response ok / fail
 │   └── env.d.ts             process.env types
 ├── drizzle.config.ts
 ├── tsconfig.json

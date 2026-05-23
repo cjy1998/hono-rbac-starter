@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationSchema } from "./common.dto.js";
 
 export const createUserSchema = z.object({
   username: z
@@ -32,10 +33,9 @@ export const userIdParamSchema = z.object({
 
 export type UserIdParamDTO = z.infer<typeof userIdParamSchema>;
 
-export const userQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().max(100).default(10),
-  keyword: z.string().trim().optional(),
+export const userQuerySchema = paginationSchema.extend({
+  username: z.string().trim().optional(),
+  email: z.string().trim().optional(),
 });
 
 export type UserQueryDTO = z.infer<typeof userQuerySchema>;

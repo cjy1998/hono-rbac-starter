@@ -3,9 +3,9 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 
-import userController from "./controller/user.js";
-import { ValidationException } from "./exceptions/validation-exception.js";
-import { requestLogger } from "./middleware/requestLogger.js";
+import userController from "./controller/user.controller.js";
+import { ValidationException } from "./exceptions/validation.exception.js";
+import { requestLogger } from "./middleware/requestLogger.middleware.js";
 import type { AppEnv } from "./types/hono.js";
 import { HTTP_STATUS } from "./utils/const.js";
 import { logger } from "./utils/logger.js";

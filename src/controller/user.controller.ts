@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { zValidator } from "../middleware/validator.js";
-import userService from "../service/user.js";
+import { zValidator } from "../middleware/validator.middleware.js";
+import userService from "../service/user.service.js";
 import {
   createUserSchema,
   loginSchema,
@@ -11,8 +11,8 @@ import {
 import { toUserVO } from "../vo/user.vo.js";
 import { fail, ok } from "../utils/response.js";
 import argon2 from "argon2";
-import { jwtAuth } from "../middleware/jwtAuth.js";
-import { roleAuth } from "../middleware/roleAuth.js";
+import { jwtAuth } from "../middleware/jwtAuth.middleware.js";
+import { roleAuth } from "../middleware/roleAuth.middleware.js";
 
 const userController = new Hono();
 
@@ -23,8 +23,8 @@ userController.get(
   zValidator("query", userQuerySchema),
   async (c) => {
     const query = c.req.valid("query");
-    const users = await userService.getUsers(query);
-    return ok(c, users.map(toUserVO));
+    const result = await userService.getUsers(query);
+    return ok(c, result);
   },
 );
 

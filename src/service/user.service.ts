@@ -1,30 +1,35 @@
-import { eq, like, or } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import { sign } from "hono/jwt";
 import argon2 from "argon2";
 import db from "../db/index.js";
 import { usersTable } from "../db/schema/users.js";
+import { notDeleted, paginate } from "../utils/query.js";
 import type { CreateUserDTO, LoginDTO, UserQueryDTO } from "../dto/user.dto.js";
-import { toUserVO, type UserWithRolesVO } from "../vo/user.vo.js";
+import {
+  toUserVO,
+  type UserListVO,
+  type UserWithRolesVO,
+} from "../vo/user.vo.js";
 import { toRoleVO } from "../vo/roles.vo.js";
 import { HTTP_STATUS } from "../utils/const.js";
 import { env } from "../env.js";
 import type { UserPayload } from "../types/hono.js";
 class UserService {
-  async getUsers(query: UserQueryDTO) {
-    const { page, pageSize, keyword } = query;
-    const where = keyword
-      ? or(
-          like(usersTable.username, `%${keyword}%`),
-          like(usersTable.email, `%${keyword}%`),
-        )
-      : undefined;
+  async getUsers(query: UserQueryDTO): Promise<UserListVO> {
+    const { page, pageSize, username, email } = query;
 
-    return await db
-      .select()
-      .from(usersTable)
-      .where(where)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize);
+    const where = and(
+      notDeleted(usersTable),
+      username ? like(usersTable.username, `%${username}%`) : undefined,
+      email ? like(usersTable.email, `%${email}%`) : undefined,
+    );
+
+    const result = await paginate(usersTable, { page, pageSize }, where);
+
+    return {
+      ...result,
+      list: result.list.map(toUserVO),
+    };
   }
 
   async getUserById(id: string) {

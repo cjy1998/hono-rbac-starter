@@ -1,5 +1,5 @@
 import { zValidator as zv } from "@hono/zod-validator";
-import { ValidationException } from "../exceptions/validation-exception.js";
+import { ValidationException } from "../exceptions/validation.exception.js";
 import type { ZodError } from "zod";
 
 /**

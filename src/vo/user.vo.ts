@@ -1,4 +1,5 @@
 import type { usersTable } from "../db/schema/users.js";
+import type { PaginatedVO } from "./common.vo.js";
 import type { RoleVO } from "./roles.vo.js";
 
 type UserPO = typeof usersTable.$inferSelect;
@@ -31,7 +32,4 @@ export interface UserWithRolesVO extends UserVO {
   roles: RoleVO[];
 }
 
-export interface UserListVO {
-  list: UserVO[];
-  total: number;
-}
+export type UserListVO = PaginatedVO<UserVO>;
