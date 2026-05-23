@@ -236,13 +236,13 @@ The service runs at <http://localhost:3000> by default.
 
 ## NPM Scripts
 
-| Command        | Description                                                          |
-| -------------- | -------------------------------------------------------------------- |
-| `pnpm dev`     | `tsx watch src/index.ts`, dev mode with hot reload                   |
-| `pnpm build`   | `tsc`, compile TypeScript into `dist/`                               |
-| `pnpm start`   | `node dist/index.js`, run the compiled artifact                      |
-| `pnpm db:g`    | `drizzle-kit generate`, generate migrations from schema              |
-| `pnpm db:m`    | `drizzle-kit migrate`, apply migrations to MySQL                     |
+| Command        | Description                                                            |
+| -------------- | ---------------------------------------------------------------------- |
+| `pnpm dev`     | `tsx watch src/index.ts`, dev mode with hot reload                     |
+| `pnpm build`   | `tsc`, compile TypeScript into `dist/`                                 |
+| `pnpm start`   | `node dist/index.js`, run the compiled artifact                        |
+| `pnpm db:g`    | `drizzle-kit generate`, generate migrations from schema                |
+| `pnpm db:m`    | `drizzle-kit migrate`, apply migrations to MySQL                       |
 | `pnpm db:seed` | `tsx scripts/seed.ts`, seed data (roles / permissions / menus / users) |
 
 ---
@@ -251,21 +251,21 @@ The service runs at <http://localhost:3000> by default.
 
 After running `pnpm db:seed`, the following accounts are inserted automatically:
 
-| Role          | Username | Password        | Description                       |
-| ------------- | -------- | --------------- | --------------------------------- |
-| Super Admin   | `admin`  | `admin123456`   | Has all permissions and menus     |
-| Regular User  | `user`   | `user123456`    | Can only access the Dashboard page |
+| Role         | Username | Password      | Description                        |
+| ------------ | -------- | ------------- | ---------------------------------- |
+| Super Admin  | `admin`  | `admin123456` | Has all permissions and menus      |
+| Regular User | `user`   | `user123456`  | Can only access the Dashboard page |
 
 ---
 
 ## API Overview
 
-| Method | Path          | Auth | Parameters                                       | Description                       |
-| ------ | ------------- | ---- | ------------------------------------------------ | --------------------------------- |
-| POST   | `/user/login` | -    | `{ email, password }` (json)                     | Login, returns user + token       |
-| POST   | `/user`       | JWT  | `{ username, nickname, email, password }` (json) | Create a user                     |
-| GET    | `/user`       | JWT  | `?page&pageSize&keyword` (query)                 | Pagination + keyword search      |
-| GET    | `/user/:id`   | JWT  | `id` (param, UUID format)                        | Get a single user                 |
+| Method | Path          | Auth | Parameters                                       | Description                 |
+| ------ | ------------- | ---- | ------------------------------------------------ | --------------------------- |
+| POST   | `/user/login` | -    | `{ email, password }` (json)                     | Login, returns user + token |
+| POST   | `/user`       | JWT  | `{ username, nickname, email, password }` (json) | Create a user               |
+| GET    | `/user`       | JWT  | `?page&pageSize&keyword` (query)                 | Pagination + keyword search |
+| GET    | `/user/:id`   | JWT  | `id` (param, UUID format)                        | Get a single user           |
 
 > All endpoints follow a unified response format:
 >
@@ -302,13 +302,13 @@ curl http://localhost:3000/user/<uuid> \
 
 The project addresses cross-cutting concerns such as authentication, caching, and request tracing through Hono middleware, all located in `src/middleware/`:
 
-| Middleware         | Description                                                                                                                            |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `jwtAuth`          | JWT parsing and verification; on success, writes the `payload` into `c.var.jwtPayload`                                                 |
-| `roleAuth`         | Role / permission authorization; based on `c.var.jwtPayload`, calls the `permissions` service to check whether the current user has the required role or permission code |
+| Middleware         | Description                                                                                                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jwtAuth`          | JWT parsing and verification; on success, writes the `payload` into `c.var.jwtPayload`                                                                                        |
+| `roleAuth`         | Role / permission authorization; based on `c.var.jwtPayload`, calls the `permissions` service to check whether the current user has the required role or permission code      |
 | `redis.middleware` | Role/permission caching middleware. On Redis cache hit it reuses the cached value; on miss it falls back to the database and writes the result back, reducing RBAC query load |
-| `zValidator`       | Request parameter validation based on `@hono/zod-validator`; on failure throws a unified `ValidationException`                         |
-| `requestLogger`    | Generates / propagates `x-request-id` and writes per-request trace logs                                                                |
+| `zValidator`       | Request parameter validation based on `@hono/zod-validator`; on failure throws a unified `ValidationException`                                                                |
+| `requestLogger`    | Generates / propagates `x-request-id` and writes per-request trace logs                                                                                                       |
 
 ### Redis Cache
 
@@ -324,11 +324,11 @@ The project ships with an engineering-grade logging solution based on Winston. A
 
 ### Output Destinations
 
-| Channel                           | Content                       | Format                                            |
-| --------------------------------- | ----------------------------- | ------------------------------------------------- |
-| Terminal console                  | Full output (per `LOG_LEVEL`) | Dev: colored single line; Prod: JSON              |
-| `logs/application-YYYY-MM-DD.log` | Full output (per `LOG_LEVEL`) | JSON, easy for log collection                     |
-| `logs/error-YYYY-MM-DD.log`       | Only `error` level            | JSON                                              |
+| Channel                           | Content                       | Format                               |
+| --------------------------------- | ----------------------------- | ------------------------------------ |
+| Terminal console                  | Full output (per `LOG_LEVEL`) | Dev: colored single line; Prod: JSON |
+| `logs/application-YYYY-MM-DD.log` | Full output (per `LOG_LEVEL`) | JSON, easy for log collection        |
+| `logs/error-YYYY-MM-DD.log`       | Only `error` level            | JSON                                 |
 
 ### Auto-Rotation Policy
 
@@ -340,11 +340,11 @@ The project ships with an engineering-grade logging solution based on Winston. A
 
 ### Environment Variables
 
-| Variable    | Default                       | Description                                                              |
-| ----------- | ----------------------------- | ------------------------------------------------------------------------ |
-| `LOG_LEVEL` | `debug` in dev / `info` in prod | Standard winston level                                                   |
-| `LOG_DIR`   | `<cwd>/logs`                  | Custom log directory (in containers usually mounted on a persistent volume) |
-| `NODE_ENV`  | -                             | When set to `production`, the console also outputs JSON                  |
+| Variable    | Default                         | Description                                                                 |
+| ----------- | ------------------------------- | --------------------------------------------------------------------------- |
+| `LOG_LEVEL` | `debug` in dev / `info` in prod | Standard winston level                                                      |
+| `LOG_DIR`   | `<cwd>/logs`                    | Custom log directory (in containers usually mounted on a persistent volume) |
+| `NODE_ENV`  | -                               | When set to `production`, the console also outputs JSON                     |
 
 ### Request Tracing
 
