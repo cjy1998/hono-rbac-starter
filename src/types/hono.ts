@@ -21,6 +21,8 @@ export type AppEnv = {
     requestId: string;
     /** JWT 解析出来的 payload，由 jwtAuth 中间件写入 */
     user?: UserPayload;
+    /** 当前请求携带的 Bearer token，由 jwtAuth 中间件写入 */
+    token?: string;
     /** Redis 客户端，由 redisMiddleware 中间件写入 */
     redis: Redis;
   };

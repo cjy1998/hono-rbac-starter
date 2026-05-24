@@ -178,7 +178,9 @@ class UserService {
     }
     return rows[0];
   }
-
+  /**
+   * 登录
+   */
   async login(
     dto: LoginDTO,
   ): Promise<

@@ -13,6 +13,7 @@ import { fail, ok } from "../utils/response.js";
 import { jwtAuth } from "../middleware/jwtAuth.middleware.js";
 import { roleAuth } from "../middleware/roleAuth.middleware.js";
 import { idSchema } from "../dto/common.dto.js";
+import { getTokenBlacklistKey, getTokenTtl } from "../utils/token.js";
 
 const userController = new Hono();
 
@@ -123,6 +124,22 @@ userController.post("/login", zValidator("json", loginSchema), async (c) => {
     return fail(c, result.errorCode, result.message);
   }
   return ok(c, { user: result.user, token: result.token });
+});
+
+/**
+ * 登出 - 将当前 token 加入 Redis 黑名单
+ */
+userController.post("/logout", jwtAuth, async (c) => {
+  const token = c.get("token");
+  const user = c.get("user");
+  if (token && user) {
+    // 只按 token 剩余有效期拉黑，避免 Redis 中残留已自然过期的 token。
+    const ttl = getTokenTtl(user.exp);
+    if (ttl > 0) {
+      await c.get("redis").set(getTokenBlacklistKey(token), "1", "EX", ttl);
+    }
+  }
+  return ok(c, null);
 });
 
 export default userController;
