@@ -1,5 +1,4 @@
 import type { Context } from "hono";
-import type { HTTP_STATUS } from "./const.js";
 
 export const ok = <T>(c: Context, data: T) =>
   c.json({

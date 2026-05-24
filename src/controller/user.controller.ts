@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { HTTPException } from "hono/http-exception";
+import type { Redis } from "ioredis";
 import { zValidator } from "../middleware/validator.middleware.js";
 import userService from "../service/user.service.js";
 import {
@@ -9,14 +9,16 @@ import {
   updateUserSchema,
   userQuerySchema,
 } from "../dto/user.dto.js";
-import { toUserVO } from "../vo/user.vo.js";
 import { fail, ok } from "../utils/response.js";
-import argon2 from "argon2";
 import { jwtAuth } from "../middleware/jwtAuth.middleware.js";
 import { roleAuth } from "../middleware/roleAuth.middleware.js";
 import { idSchema } from "../dto/common.dto.js";
 
 const userController = new Hono();
+
+const clearUserCache = async (redis: Redis, id: string) => {
+  await redis.del(`user:${id}`, `user:roles:${id}`);
+};
 /**
  * 创建用户
  */
@@ -40,6 +42,7 @@ userController.delete(
   async (c) => {
     const { id } = c.req.valid("param");
     const result = await userService.deleteUser(id);
+    await clearUserCache(c.get("redis"), id);
     return ok(c, result);
   },
 );
@@ -55,6 +58,7 @@ userController.put(
     const { id } = c.req.valid("param");
     const dto = c.req.valid("json");
     const result = await userService.updateUser(id, dto);
+    await clearUserCache(c.get("redis"), id);
     return ok(c, result);
   },
 );
@@ -105,6 +109,7 @@ userController.put(
     const { id } = c.req.valid("param");
     const dto = c.req.valid("json");
     const result = await userService.updatePassword(id, dto);
+    await clearUserCache(c.get("redis"), id);
     return ok(c, result);
   },
 );

@@ -1,4 +1,4 @@
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, like, ne } from "drizzle-orm";
 import { sign } from "hono/jwt";
 import argon2 from "argon2";
 import db from "../db/index.js";
@@ -21,7 +21,6 @@ import { toRoleVO } from "../vo/roles.vo.js";
 import { HTTP_STATUS } from "../utils/const.js";
 import { env } from "../env.js";
 import type { UserPayload } from "../types/hono.js";
-import { logger } from "../utils/logger.js";
 import { HTTPException } from "hono/http-exception";
 class UserService {
   /**
@@ -41,39 +40,54 @@ class UserService {
     const storageHash = await argon2.hash(user.password);
     const newUser = { ...user, password: storageHash };
     const result = await db.insert(usersTable).values(newUser).$returningId();
-    const resulUser = await this.getUserById(result[0].id);
-    return resulUser;
+    const resultUser = await this.getExistingUserById(result[0].id);
+    return toUserVO(resultUser);
   }
   /**
    * 删除用户
    */
   async deleteUser(id: string): Promise<{ id: string }> {
-    await this.getUserById(id);
+    await this.getExistingUserById(id);
     await db
       .update(usersTable)
       .set({ deletedAt: new Date() })
-      .where(eq(usersTable.id, id));
+      .where(and(notDeleted(usersTable), eq(usersTable.id, id)));
     return { id };
   }
   /**
    * 更新用户
    */
   async updateUser(id: string, user: UpdateUserDTO): Promise<UserVO> {
-    await this.getUserById(id);
-    await db.update(usersTable).set(user).where(eq(usersTable.id, id));
-    const newUser = await this.getUserById(id);
-    return newUser;
+    const existingUser = await this.getExistingUserById(id);
+    if (user.email && user.email !== existingUser.email) {
+      const rows = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(and(eq(usersTable.email, user.email), ne(usersTable.id, id)))
+        .limit(1);
+      if (rows.length > 0) {
+        throw new HTTPException(HTTP_STATUS.BAD_REQUEST, {
+          message: "邮箱已注册",
+        });
+      }
+    }
+    await db
+      .update(usersTable)
+      .set(user)
+      .where(and(notDeleted(usersTable), eq(usersTable.id, id)));
+    const newUser = await this.getExistingUserById(id);
+    return toUserVO(newUser);
   }
   /**
    * 修改密码
    */
   async updatePassword(id: string, dto: UpdatePasswordDTO): Promise<null> {
-    await this.getUserById(id);
+    await this.getExistingUserById(id);
     const storageHash = await argon2.hash(dto.password);
     await db
       .update(usersTable)
       .set({ password: storageHash })
-      .where(eq(usersTable.id, id));
+      .where(and(notDeleted(usersTable), eq(usersTable.id, id)));
     return null;
   }
   /**
@@ -99,24 +113,40 @@ class UserService {
    * 获取用户
    */
   async getUserById(id: string) {
-    const where = and(notDeleted(usersTable), eq(usersTable.id, id));
-    const rows = await db.select().from(usersTable).where(where).limit(1);
+    const user = await this.getActiveUserById(id);
+    return toUserVO(user);
+  }
+  /**
+   * 验证用户是否存在
+   */
+  async getExistingUserById(id: string) {
+    const rows = await db
+      .select()
+      .from(usersTable)
+      .where(and(notDeleted(usersTable), eq(usersTable.id, id)))
+      .limit(1);
     if (rows.length === 0) {
       throw new HTTPException(HTTP_STATUS.NOT_FOUND, {
         message: "用户不存在",
       });
     }
-    if (rows[0].status === 0) {
+    return rows[0];
+  }
+  /**
+   * 验证用户是否启用
+   */
+  async getActiveUserById(id: string) {
+    const user = await this.getExistingUserById(id);
+    if (user.status === 0) {
       throw new HTTPException(HTTP_STATUS.FORBIDDEN, {
         message: "用户已禁用",
       });
     }
-    return toUserVO(rows[0]);
+    return user;
   }
-
   async getUserWithRoles(id: string) {
     const rows = await db.query.usersTable.findFirst({
-      where: eq(usersTable.id, id),
+      where: and(notDeleted(usersTable), eq(usersTable.id, id)),
       with: {
         userRoles: {
           with: {
@@ -134,7 +164,7 @@ class UserService {
     const rows = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, email))
+      .where(and(notDeleted(usersTable), eq(usersTable.email, email)))
       .limit(1);
     if (rows.length === 0) {
       throw new HTTPException(HTTP_STATUS.NOT_FOUND, {
@@ -155,14 +185,33 @@ class UserService {
     | { success: true; user: UserWithRolesVO; token: string }
     | { success: false; errorCode: number; message: string }
   > {
-    const user = await this.getUserByEmail(dto.email);
+    const rows = await db
+      .select()
+      .from(usersTable)
+      .where(and(notDeleted(usersTable), eq(usersTable.email, dto.email)))
+      .limit(1);
+    const user = rows[0];
+    if (!user) {
+      return {
+        success: false,
+        errorCode: HTTP_STATUS.UNAUTHORIZED,
+        message: "邮箱或密码不正确",
+      };
+    }
+    if (user.status === 0) {
+      return {
+        success: false,
+        errorCode: HTTP_STATUS.FORBIDDEN,
+        message: "用户已禁用",
+      };
+    }
 
     const isPasswordValid = await argon2.verify(user.password, dto.password);
     if (!isPasswordValid) {
       return {
         success: false,
         errorCode: HTTP_STATUS.UNAUTHORIZED,
-        message: "密码不正确",
+        message: "邮箱或密码不正确",
       };
     }
 
