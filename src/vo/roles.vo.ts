@@ -1,4 +1,5 @@
 import type { rolesTable } from "../db/schema/roles.js";
+import type { PaginatedVO } from "./common.vo.js";
 
 type RolePO = typeof rolesTable.$inferSelect;
 export interface RoleVO {
@@ -22,3 +23,5 @@ export const toRoleVO = (role: RolePO): RoleVO => ({
   createdAt: role.createdAt.toISOString(),
   updatedAt: role.updatedAt.toISOString(),
 });
+
+export type RoleListVO = PaginatedVO<RoleVO>;
