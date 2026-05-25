@@ -60,7 +60,9 @@ hono-test/
 │   │   ├── const.ts          HTTP_STATUS 常量
 │   │   ├── logger.ts         Winston logger
 │   │   ├── query.ts          公共查询工具（notDeleted、paginate）
-│   │   └── response.ts       统一响应 ok / fail
+│   │   ├── response.ts       统一响应 ok / fail
+│   │   └── token.ts          Bearer token 解析 + JWT 黑名单 key 工具
+│   ├── env.ts               运行时环境变量读取与校验
 │   └── env.d.ts             process.env 类型
 ├── drizzle.config.ts
 ├── tsconfig.json
@@ -260,22 +262,28 @@ pnpm dev
 
 ## API 一览
 
-| Method | Path          | 鉴权 | 入参                                             | 说明                    |
-| ------ | ------------- | ---- | ------------------------------------------------ | ----------------------- |
-| POST   | `/user/login` | -    | `{ email, password }` (json)                     | 登录，返回 user + token |
-| POST   | `/user`       | JWT  | `{ username, nickname, email, password }` (json) | 创建用户                |
-| GET    | `/user`       | JWT  | `?page&pageSize&keyword` (query)                 | 分页 + 关键字搜索       |
-| GET    | `/user/:id`   | JWT  | `id` (param，UUID 格式)                          | 查询单个用户            |
+| Method | Path                 | 鉴权 | 入参                                             | 说明                                |
+| ------ | -------------------- | ---- | ------------------------------------------------ | ----------------------------------- |
+| POST   | `/user/login`        | -    | `{ email, password }` (json)                     | 登录，返回 user + token             |
+| POST   | `/user/logout`       | JWT  | -                                                | 登出，将当前 token 加入黑名单       |
+| POST   | `/user`              | JWT  | `{ username, nickname, email, password }` (json) | 创建用户                            |
+| GET    | `/user`              | JWT  | `?page&pageSize&username&email` (query)          | 分页 + 用户名/邮箱搜索              |
+| GET    | `/user/:id`          | JWT  | `id` (param，UUID 格式)                          | 查询单个用户                        |
+| PUT    | `/user/:id`          | JWT  | `id` (param) + 用户字段（json，部分可选）        | 更新用户信息，同时清理 Redis 缓存   |
+| PUT    | `/user/:id/password` | JWT  | `id` (param) + `{ password }` (json)             | 修改密码，同时清理 Redis 缓存       |
+| DELETE | `/user/:id`          | JWT  | `id` (param，UUID 格式)                          | 软删除用户，同时清理 Redis 缓存     |
 
 > 所有接口的响应都遵循统一格式：
 >
 > ```jsonc
 > // 成功
-> { "success": true,  "data": { ... }, "errorCode": 0,   "message": "ok" }
+> { "success": true,  "data": { ... }, "errorCode": 0,   "message": "ok",          "responseId": "<uuid>" }
 >
 > // 失败
-> { "success": false, "data": null,    "errorCode": 401, "message": "token 已过期" }
+> { "success": false, "data": null,    "errorCode": 401, "message": "token 已过期", "responseId": "<uuid>" }
 > ```
+>
+> `responseId` 与请求级 `x-request-id` 保持一致，便于前端 / 网关 / 日志系统串联一次完整请求链路。
 
 ---
 
@@ -294,6 +302,10 @@ curl http://localhost:3000/user \
 # 3. 查询单个用户（id 为 UUID）
 curl http://localhost:3000/user/<uuid> \
   -H 'Authorization: Bearer <token>'
+
+# 4. 登出（当前 token 会写入 Redis 黑名单，之后不可继续使用）
+curl -X POST http://localhost:3000/user/logout \
+  -H 'Authorization: Bearer <token>'
 ```
 
 ---
@@ -304,8 +316,8 @@ curl http://localhost:3000/user/<uuid> \
 
 | 中间件             | 说明                                                                                                       |
 | ------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `jwtAuth`          | JWT 解析与校验，校验通过后把 `payload` 写入 `c.var.jwtPayload`                                             |
-| `roleAuth`         | 角色 / 权限鉴权，基于 `c.var.jwtPayload` 调用 `permissions` 服务校验当前用户是否具备指定角色编码或权限编码 |
+| `jwtAuth`          | JWT 解析与校验，校验通过后把用户 payload 写入 `c.set("user", payload)`，把原始 token 写入 `c.set("token", token)`；同时检查 Redis 黑名单，避免已登出的 token 在自然过期前继续使用 |
+| `roleAuth`         | 角色 / 权限鉴权，基于 `c.get("user")` 调用 `permissions` 服务校验当前用户是否具备指定角色编码或 API 权限    |
 | `redis.middleware` | 角色权限缓存中间件，命中 Redis 缓存时直接复用，未命中则回源数据库并回写缓存，降低 RBAC 查询压力            |
 | `zValidator`       | 基于 `@hono/zod-validator` 的请求参数校验，校验失败抛出统一的 `ValidationException`                        |
 | `requestLogger`    | 生成 / 透传 `x-request-id`，并按请求维度记录链路日志                                                       |
@@ -314,7 +326,9 @@ curl http://localhost:3000/user/<uuid> \
 
 - `src/redis.ts` 基于 `ioredis` 创建单例连接，读取 `REDIS_HOST / REDIS_PORT / REDIS_PASSWORD / REDIS_DB` 等环境变量
 - `redis.middleware` 配合 `roleAuth` 使用，缓存用户的角色与权限集合，避免每次请求都查表
-- 用户角色 / 权限变更时，需要主动清理或刷新对应 key，保证鉴权结果与数据库一致
+- 缓存失效
+  - 用户 `update / delete / change password` 后，controller 会调用 `clearUserCache` 删除 `user:{id}` 和 `user:roles:{id}`，下一次读取会回源数据库
+  - 用户登出时，当前 token 会以 `jwt:blacklist:<sha256(token)>` 写入 Redis，TTL 等于 JWT 剩余有效期（`exp - now`），过期后自动释放，避免 Redis 残留已自然过期的 token
 
 ---
 

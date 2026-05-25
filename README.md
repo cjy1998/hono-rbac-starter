@@ -60,7 +60,9 @@ hono-test/
 │   │   ├── const.ts          HTTP status constants
 │   │   ├── logger.ts         Winston logger
 │   │   ├── query.ts          Common query utilities (notDeleted, paginate)
-│   │   └── response.ts       Unified response ok / fail
+│   │   ├── response.ts       Unified response ok / fail
+│   │   └── token.ts          Bearer token parsing + JWT blacklist key helpers
+│   ├── env.ts               Runtime environment loading and validation
 │   └── env.d.ts             process.env types
 ├── drizzle.config.ts
 ├── tsconfig.json
@@ -260,22 +262,28 @@ After running `pnpm db:seed`, the following accounts are inserted automatically:
 
 ## API Overview
 
-| Method | Path          | Auth | Parameters                                       | Description                 |
-| ------ | ------------- | ---- | ------------------------------------------------ | --------------------------- |
-| POST   | `/user/login` | -    | `{ email, password }` (json)                     | Login, returns user + token |
-| POST   | `/user`       | JWT  | `{ username, nickname, email, password }` (json) | Create a user               |
-| GET    | `/user`       | JWT  | `?page&pageSize&keyword` (query)                 | Pagination + keyword search |
-| GET    | `/user/:id`   | JWT  | `id` (param, UUID format)                        | Get a single user           |
+| Method | Path                   | Auth | Parameters                                       | Description                              |
+| ------ | ---------------------- | ---- | ------------------------------------------------ | ---------------------------------------- |
+| POST   | `/user/login`          | -    | `{ email, password }` (json)                     | Login, returns user + token              |
+| POST   | `/user/logout`         | JWT  | -                                                | Logout, adds current token to blacklist  |
+| POST   | `/user`                | JWT  | `{ username, nickname, email, password }` (json) | Create a user                            |
+| GET    | `/user`                | JWT  | `?page&pageSize&username&email` (query)          | Pagination + username/email search       |
+| GET    | `/user/:id`            | JWT  | `id` (param, UUID format)                        | Get a single user                        |
+| PUT    | `/user/:id`            | JWT  | `id` (param) + partial user fields (json)        | Update a user, also clears Redis cache   |
+| PUT    | `/user/:id/password`   | JWT  | `id` (param) + `{ password }` (json)             | Change password, also clears Redis cache |
+| DELETE | `/user/:id`            | JWT  | `id` (param, UUID format)                        | Soft-delete a user, also clears cache    |
 
 > All endpoints follow a unified response format:
 >
 > ```jsonc
 > // Success
-> { "success": true,  "data": { ... }, "errorCode": 0,   "message": "ok" }
+> { "success": true,  "data": { ... }, "errorCode": 0,   "message": "ok",          "responseId": "<uuid>" }
 >
 > // Failure
-> { "success": false, "data": null,    "errorCode": 401, "message": "token expired" }
+> { "success": false, "data": null,    "errorCode": 401, "message": "token expired", "responseId": "<uuid>" }
 > ```
+>
+> `responseId` mirrors the request-scoped `x-request-id`, so frontend / gateway / log system can correlate a response with its full server-side trace.
 
 ---
 
@@ -294,6 +302,10 @@ curl http://localhost:3000/user \
 # 3. Get a single user (id is a UUID)
 curl http://localhost:3000/user/<uuid> \
   -H 'Authorization: Bearer <token>'
+
+# 4. Logout (token will be added to the Redis blacklist and become unusable)
+curl -X POST http://localhost:3000/user/logout \
+  -H 'Authorization: Bearer <token>'
 ```
 
 ---
@@ -304,8 +316,8 @@ The project addresses cross-cutting concerns such as authentication, caching, an
 
 | Middleware         | Description                                                                                                                                                                   |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `jwtAuth`          | JWT parsing and verification; on success, writes the `payload` into `c.var.jwtPayload`                                                                                        |
-| `roleAuth`         | Role / permission authorization; based on `c.var.jwtPayload`, calls the `permissions` service to check whether the current user has the required role or permission code      |
+| `jwtAuth`          | JWT parsing and verification; on success, writes the typed user payload into `c.set("user", payload)` and the raw token into `c.set("token", token)`. It also checks the Redis blacklist so logged-out tokens cannot be reused before they naturally expire |
+| `roleAuth`         | Role / permission authorization; based on `c.get("user")`, calls the permissions service to check whether the current user has the required role or API permission           |
 | `redis.middleware` | Role/permission caching middleware. On Redis cache hit it reuses the cached value; on miss it falls back to the database and writes the result back, reducing RBAC query load |
 | `zValidator`       | Request parameter validation based on `@hono/zod-validator`; on failure throws a unified `ValidationException`                                                                |
 | `requestLogger`    | Generates / propagates `x-request-id` and writes per-request trace logs                                                                                                       |
@@ -314,7 +326,9 @@ The project addresses cross-cutting concerns such as authentication, caching, an
 
 - `src/redis.ts` creates a singleton connection based on `ioredis`, reading environment variables such as `REDIS_HOST / REDIS_PORT / REDIS_PASSWORD / REDIS_DB`
 - `redis.middleware` works together with `roleAuth` to cache the user's role and permission set, avoiding a database query on every request
-- When a user's roles / permissions change, the relevant keys must be actively cleared or refreshed to keep authorization results consistent with the database
+- Cache invalidation
+  - On user `update / delete / change password`, the controller calls `clearUserCache` to remove `user:{id}` and `user:roles:{id}` so the next read goes back to the database
+  - On logout, the current token is written into `jwt:blacklist:<sha256(token)>` with a TTL equal to its remaining JWT lifetime (`exp - now`), so the key clears itself automatically and Redis never accumulates expired entries
 
 ---
 
