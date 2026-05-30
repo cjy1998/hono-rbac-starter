@@ -208,7 +208,12 @@ REDIS_DB=0
 # NODE_ENV=production      # In production the console output is also JSON
 # LOG_LEVEL=info           # error / warn / info / http / debug / silly
 # LOG_DIR=/var/log/hono    # Custom log directory, defaults to <cwd>/logs
+
+# Optional: CORS
+ALLOWED_ORIGINS=*
 ```
+
+See `.env.example` for more details.
 
 ### 4. Create Database and Run Migrations
 

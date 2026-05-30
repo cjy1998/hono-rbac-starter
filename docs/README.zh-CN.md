@@ -208,7 +208,11 @@ REDIS_DB=0
 # NODE_ENV=production      # 生产环境会让控制台输出也走 JSON 格式
 # LOG_LEVEL=info           # error / warn / info / http / debug / silly
 # LOG_DIR=/var/log/hono    # 自定义日志目录，默认 <cwd>/logs
+
+# 可选：CORS 相关
+ALLOWED_ORIGINS=*
 ```
+详见`.env.example`
 
 ### 4. 创建数据库并执行迁移
 
