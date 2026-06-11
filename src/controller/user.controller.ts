@@ -14,12 +14,21 @@ import { jwtAuth } from "../middleware/jwtAuth.middleware.js";
 import { roleAuth } from "../middleware/roleAuth.middleware.js";
 import { idSchema, roleIdsSchema } from "../dto/common.dto.js";
 import { getTokenBlacklistKey, getTokenTtl } from "../utils/token.js";
+import { createRateLimit } from "../middleware/rateLimit.middleware.js";
+import { env } from "../env.js";
 
 const userController = new Hono();
 
 const clearUserCache = async (redis: Redis, id: string) => {
   await redis.del(`user:${id}`, `user:roles:${id}`);
 };
+
+const loginRateLimit = createRateLimit({
+  keyPrefix: "login",
+  limit: env.RATE_LIMIT_LOGIN_MAX,
+  windowMs: env.RATE_LIMIT_LOGIN_WINDOW_SEC * 1000,
+  message: "登录过于频繁，请稍后再试",
+});
 /**
  * 创建用户
  */
@@ -151,14 +160,19 @@ userController.put(
 /**
  * 登录 - 返回用户信息（含角色）+ token
  */
-userController.post("/login", zValidator("json", loginSchema), async (c) => {
-  const dto = c.req.valid("json");
-  const result = await userService.login(dto);
-  if (!result.success) {
-    return fail(c, result.errorCode, result.message);
-  }
-  return ok(c, { user: result.user, token: result.token });
-});
+userController.post(
+  "/login",
+  loginRateLimit,
+  zValidator("json", loginSchema),
+  async (c) => {
+    const dto = c.req.valid("json");
+    const result = await userService.login(dto);
+    if (!result.success) {
+      return fail(c, result.errorCode, result.message);
+    }
+    return ok(c, { user: result.user, token: result.token });
+  },
+);
 
 /**
  * 登出 - 将当前 token 加入 Redis 黑名单

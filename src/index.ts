@@ -16,6 +16,8 @@ import { fail } from "./utils/response.js";
 import { env } from "./env.js";
 import { redisMiddleware } from "./middleware/redis.middleware.js";
 import { cors } from "hono/cors";
+import { securityHeaders } from "./middleware/securityHeaders.middleware.js";
+import { xssProtection } from "./middleware/xss.middleware.js";
 
 // 传入 AppEnv 让 c.set/c.get/c.var 获得强类型
 const app = new Hono<AppEnv>();
@@ -26,6 +28,8 @@ app.use(
     origin: env.ALLOWED_ORIGINS ?? "*",
   }),
 );
+app.use("*", securityHeaders);
+app.use("*", xssProtection);
 
 /**
  * 请求日志中间件
