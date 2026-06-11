@@ -10,12 +10,33 @@ import {
 import { ok } from "../utils/response.js";
 import { jwtAuth } from "../middleware/jwtAuth.middleware.js";
 import { roleAuth } from "../middleware/roleAuth.middleware.js";
-import { idSchema } from "../dto/common.dto.js";
+import {
+  idSchema,
+  menuIdsSchema,
+  permissionIdsSchema,
+} from "../dto/common.dto.js";
 
 const roleController = new Hono();
 
 const clearUserCache = async (redis: Redis, id: string) => {
   await redis.del(`user:${id}`, `user:roles:${id}`);
+};
+
+const clearPermissionsCache = async (redis: Redis) => {
+  let cursor = "0";
+  do {
+    const [nextCursor, keys] = await redis.scan(
+      cursor,
+      "MATCH",
+      "permissions:roles:*",
+      "COUNT",
+      100,
+    );
+    cursor = nextCursor;
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+  } while (cursor !== "0");
 };
 /**
  * 创建角色
@@ -60,6 +81,72 @@ roleController.put(
     const dto = c.req.valid("json");
     const result = await roleService.updateRole(id, dto);
     await clearUserCache(c.get("redis"), id);
+    return ok(c, result);
+  },
+);
+/**
+ * 绑定角色权限
+ */
+roleController.post(
+  "/:id/permissions",
+  jwtAuth,
+  roleAuth,
+  zValidator("param", idSchema),
+  zValidator("json", permissionIdsSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const dto = c.req.valid("json");
+    const result = await roleService.addRolePermissions(id, dto);
+    await clearPermissionsCache(c.get("redis"));
+    return ok(c, result);
+  },
+);
+/**
+ * 解绑角色权限
+ */
+roleController.delete(
+  "/:id/permissions",
+  jwtAuth,
+  roleAuth,
+  zValidator("param", idSchema),
+  zValidator("json", permissionIdsSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const dto = c.req.valid("json");
+    const result = await roleService.deleteRolePermissions(id, dto);
+    await clearPermissionsCache(c.get("redis"));
+    return ok(c, result);
+  },
+);
+/**
+ * 绑定角色菜单
+ */
+roleController.post(
+  "/:id/menus",
+  jwtAuth,
+  roleAuth,
+  zValidator("param", idSchema),
+  zValidator("json", menuIdsSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const dto = c.req.valid("json");
+    const result = await roleService.addRoleMenus(id, dto);
+    return ok(c, result);
+  },
+);
+/**
+ * 解绑角色菜单
+ */
+roleController.delete(
+  "/:id/menus",
+  jwtAuth,
+  roleAuth,
+  zValidator("param", idSchema),
+  zValidator("json", menuIdsSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const dto = c.req.valid("json");
+    const result = await roleService.deleteRoleMenus(id, dto);
     return ok(c, result);
   },
 );

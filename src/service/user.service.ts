@@ -1,7 +1,9 @@
-import { and, eq, like, ne } from "drizzle-orm";
+import { and, eq, inArray, like, ne } from "drizzle-orm";
 import { sign } from "hono/jwt";
 import argon2 from "argon2";
 import db from "../db/index.js";
+import { rolesTable } from "../db/schema/roles.js";
+import { userRoleTable } from "../db/schema/user_role.js";
 import { usersTable } from "../db/schema/users.js";
 import { notDeleted, paginate } from "../utils/query.js";
 import type {
@@ -11,6 +13,7 @@ import type {
   UpdateUserDTO,
   UserQueryDTO,
 } from "../dto/user.dto.js";
+import type { RoleIdsDTO } from "../dto/common.dto.js";
 import {
   toUserVO,
   type UserListVO,
@@ -115,6 +118,62 @@ class UserService {
   async getUserById(id: string) {
     const user = await this.getActiveUserById(id);
     return toUserVO(user);
+  }
+  /**
+   * 给用户绑定角色
+   */
+  async addUserRoles(
+    id: string,
+    dto: RoleIdsDTO,
+  ): Promise<{ userId: string; roleIds: string[] }> {
+    await this.getExistingUserById(id);
+    await this.ensureRolesExist(dto.roleIds);
+
+    const existingRows = await db
+      .select({ roleId: userRoleTable.roleId })
+      .from(userRoleTable)
+      .where(
+        and(
+          eq(userRoleTable.userId, id),
+          inArray(userRoleTable.roleId, dto.roleIds),
+        ),
+      );
+    const existingRoleIds = new Set(existingRows.map((row) => row.roleId));
+    const roleIdsToInsert = dto.roleIds.filter(
+      (roleId) => !existingRoleIds.has(roleId),
+    );
+
+    if (roleIdsToInsert.length > 0) {
+      await db.insert(userRoleTable).values(
+        roleIdsToInsert.map((roleId) => ({
+          userId: id,
+          roleId,
+        })),
+      );
+    }
+
+    return { userId: id, roleIds: dto.roleIds };
+  }
+  /**
+   * 解绑用户角色
+   */
+  async deleteUserRoles(
+    id: string,
+    dto: RoleIdsDTO,
+  ): Promise<{ userId: string; roleIds: string[] }> {
+    await this.getExistingUserById(id);
+    await this.ensureRolesExist(dto.roleIds);
+
+    await db
+      .delete(userRoleTable)
+      .where(
+        and(
+          eq(userRoleTable.userId, id),
+          inArray(userRoleTable.roleId, dto.roleIds),
+        ),
+      );
+
+    return { userId: id, roleIds: dto.roleIds };
   }
   /**
    * 验证用户是否存在
@@ -233,6 +292,18 @@ class UserService {
     const token = await sign(payload, env.JWT_SECRET);
 
     return { success: true, user: userVO, token };
+  }
+
+  private async ensureRolesExist(roleIds: string[]) {
+    const rows = await db
+      .select({ id: rolesTable.id })
+      .from(rolesTable)
+      .where(and(notDeleted(rolesTable), inArray(rolesTable.id, roleIds)));
+    if (rows.length !== roleIds.length) {
+      throw new HTTPException(HTTP_STATUS.NOT_FOUND, {
+        message: "角色不存在",
+      });
+    }
   }
 }
 

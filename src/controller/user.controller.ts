@@ -12,7 +12,7 @@ import {
 import { fail, ok } from "../utils/response.js";
 import { jwtAuth } from "../middleware/jwtAuth.middleware.js";
 import { roleAuth } from "../middleware/roleAuth.middleware.js";
-import { idSchema } from "../dto/common.dto.js";
+import { idSchema, roleIdsSchema } from "../dto/common.dto.js";
 import { getTokenBlacklistKey, getTokenTtl } from "../utils/token.js";
 
 const userController = new Hono();
@@ -59,6 +59,40 @@ userController.put(
     const { id } = c.req.valid("param");
     const dto = c.req.valid("json");
     const result = await userService.updateUser(id, dto);
+    await clearUserCache(c.get("redis"), id);
+    return ok(c, result);
+  },
+);
+/**
+ * 绑定用户角色
+ */
+userController.post(
+  "/:id/roles",
+  jwtAuth,
+  roleAuth,
+  zValidator("param", idSchema),
+  zValidator("json", roleIdsSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const dto = c.req.valid("json");
+    const result = await userService.addUserRoles(id, dto);
+    await clearUserCache(c.get("redis"), id);
+    return ok(c, result);
+  },
+);
+/**
+ * 解绑用户角色
+ */
+userController.delete(
+  "/:id/roles",
+  jwtAuth,
+  roleAuth,
+  zValidator("param", idSchema),
+  zValidator("json", roleIdsSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const dto = c.req.valid("json");
+    const result = await userService.deleteUserRoles(id, dto);
     await clearUserCache(c.get("redis"), id);
     return ok(c, result);
   },

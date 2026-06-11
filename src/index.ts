@@ -6,6 +6,7 @@ import { HTTPException } from "hono/http-exception";
 import userController from "./controller/user.controller.js";
 import permissionsController from "./controller/permissions.controller.js";
 import menuController from "./controller/menu.controller.js";
+import roleController from "./controller/role.controller.js";
 import { ValidationException } from "./exceptions/validation.exception.js";
 import { requestLogger } from "./middleware/requestLogger.middleware.js";
 import type { AppEnv } from "./types/hono.js";
@@ -56,6 +57,7 @@ app.onError((err, c) => {
 });
 
 app.route("/user", userController);
+app.route("/role", roleController);
 app.route("/permissions", permissionsController);
 app.route("/menu", menuController);
 
