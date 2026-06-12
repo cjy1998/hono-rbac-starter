@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import type { Redis } from "ioredis";
 import { zValidator } from "../middleware/validator.middleware.js";
 import userService from "../service/user.service.js";
@@ -16,6 +17,8 @@ import { idSchema, roleIdsSchema } from "../dto/common.dto.js";
 import { getTokenBlacklistKey, getTokenTtl } from "../utils/token.js";
 import { createRateLimit } from "../middleware/rateLimit.middleware.js";
 import { env } from "../env.js";
+import { HTTP_STATUS } from "../utils/const.js";
+import { CACHE_NULL_VALUE, getTtlWithJitter } from "../utils/cache.js";
 
 const userController = new Hono();
 
@@ -29,6 +32,8 @@ const loginRateLimit = createRateLimit({
   windowMs: env.RATE_LIMIT_LOGIN_WINDOW_SEC * 1000,
   message: "登录过于频繁，请稍后再试",
 });
+const USER_CACHE_TTL = 3600;
+const USER_CACHE_NULL_TTL = 60;
 /**
  * 创建用户
  */
@@ -134,11 +139,33 @@ userController.get(
     const cacheKey = `user:${id}`;
     const cached = await redis.get(cacheKey);
     if (cached) {
+      if (cached === CACHE_NULL_VALUE) {
+        throw new HTTPException(HTTP_STATUS.NOT_FOUND, {
+          message: "用户不存在",
+        });
+      }
       return ok(c, JSON.parse(cached));
     }
-    const user = await userService.getUserById(id);
-    await redis.set(cacheKey, JSON.stringify(user), "EX", 3600);
-    return ok(c, user);
+    try {
+      const user = await userService.getUserById(id);
+      await redis.set(
+        cacheKey,
+        JSON.stringify(user),
+        "EX",
+        getTtlWithJitter(USER_CACHE_TTL),
+      );
+      return ok(c, user);
+    } catch (err) {
+      if (err instanceof HTTPException && err.status === HTTP_STATUS.NOT_FOUND) {
+        await redis.set(
+          cacheKey,
+          CACHE_NULL_VALUE,
+          "EX",
+          getTtlWithJitter(USER_CACHE_NULL_TTL, 15),
+        );
+      }
+      throw err;
+    }
   },
 );
 /**

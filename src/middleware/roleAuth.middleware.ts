@@ -9,9 +9,10 @@ import { HTTP_STATUS } from "../utils/const.js";
 import type { AppEnv } from "../types/hono.js";
 import userService from "../service/user.service.js";
 import permissionsService from "../service/permissions.service.js";
+import { getTtlWithJitter } from "../utils/cache.js";
 
 const SUPER_ADMIN_CODE = "super_admin";
-const ROLES_TTL = 300; // 5 分钟
+const ROLES_TTL = 300; // 5 分钟（实际会叠加随机抖动）
 
 type UserWithRoles = Awaited<ReturnType<typeof userService.getUserWithRoles>>;
 type Permissions = Awaited<
@@ -36,7 +37,12 @@ export const roleAuth = createMiddleware<AppEnv>(async (c, next) => {
     userWithRoles = JSON.parse(cachedRoles) as UserWithRoles;
   } else {
     userWithRoles = await userService.getUserWithRoles(user.id);
-    await redis.set(rolesKey, JSON.stringify(userWithRoles), "EX", ROLES_TTL);
+    await redis.set(
+      rolesKey,
+      JSON.stringify(userWithRoles),
+      "EX",
+      getTtlWithJitter(ROLES_TTL),
+    );
   }
 
   const roleIds = userWithRoles?.userRoles.map((ur) => ur.role.id) ?? [];
@@ -63,7 +69,7 @@ export const roleAuth = createMiddleware<AppEnv>(async (c, next) => {
       permissionsKey,
       JSON.stringify(permissions),
       "EX",
-      ROLES_TTL,
+      getTtlWithJitter(ROLES_TTL),
     );
   }
 
