@@ -20,7 +20,10 @@ const roleController = new Hono();
 
 const clearUsersCache = async (redis: Redis, userIds: string[]) => {
   if (userIds.length === 0) return;
-  const keys = userIds.flatMap((userId) => [`user:${userId}`, `user:roles:${userId}`]);
+  const keys = userIds.flatMap((userId) => [
+    `user:${userId}`,
+    `user:roles:${userId}`,
+  ]);
   await redis.del(...keys);
 };
 

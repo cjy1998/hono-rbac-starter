@@ -50,25 +50,89 @@ type PermissionSeed = {
 };
 
 const BUTTON_PERMISSIONS: PermissionSeed[] = [
-  { permissionName: "用户列表", permissionCode: "user:list", permissionType: 1 },
-  { permissionName: "创建用户", permissionCode: "user:create", permissionType: 1 },
-  { permissionName: "编辑用户", permissionCode: "user:update", permissionType: 1 },
-  { permissionName: "删除用户", permissionCode: "user:delete", permissionType: 1 },
+  {
+    permissionName: "用户列表",
+    permissionCode: "user:list",
+    permissionType: 1,
+  },
+  {
+    permissionName: "创建用户",
+    permissionCode: "user:create",
+    permissionType: 1,
+  },
+  {
+    permissionName: "编辑用户",
+    permissionCode: "user:update",
+    permissionType: 1,
+  },
+  {
+    permissionName: "删除用户",
+    permissionCode: "user:delete",
+    permissionType: 1,
+  },
 
-  { permissionName: "角色列表", permissionCode: "role:list", permissionType: 1 },
-  { permissionName: "创建角色", permissionCode: "role:create", permissionType: 1 },
-  { permissionName: "编辑角色", permissionCode: "role:update", permissionType: 1 },
-  { permissionName: "删除角色", permissionCode: "role:delete", permissionType: 1 },
+  {
+    permissionName: "角色列表",
+    permissionCode: "role:list",
+    permissionType: 1,
+  },
+  {
+    permissionName: "创建角色",
+    permissionCode: "role:create",
+    permissionType: 1,
+  },
+  {
+    permissionName: "编辑角色",
+    permissionCode: "role:update",
+    permissionType: 1,
+  },
+  {
+    permissionName: "删除角色",
+    permissionCode: "role:delete",
+    permissionType: 1,
+  },
 
-  { permissionName: "菜单列表", permissionCode: "menu:list", permissionType: 1 },
-  { permissionName: "创建菜单", permissionCode: "menu:create", permissionType: 1 },
-  { permissionName: "编辑菜单", permissionCode: "menu:update", permissionType: 1 },
-  { permissionName: "删除菜单", permissionCode: "menu:delete", permissionType: 1 },
+  {
+    permissionName: "菜单列表",
+    permissionCode: "menu:list",
+    permissionType: 1,
+  },
+  {
+    permissionName: "创建菜单",
+    permissionCode: "menu:create",
+    permissionType: 1,
+  },
+  {
+    permissionName: "编辑菜单",
+    permissionCode: "menu:update",
+    permissionType: 1,
+  },
+  {
+    permissionName: "删除菜单",
+    permissionCode: "menu:delete",
+    permissionType: 1,
+  },
 
-  { permissionName: "权限列表", permissionCode: "permission:list", permissionType: 1 },
-  { permissionName: "创建权限", permissionCode: "permission:create", permissionType: 1 },
-  { permissionName: "编辑权限", permissionCode: "permission:update", permissionType: 1 },
-  { permissionName: "删除权限", permissionCode: "permission:delete", permissionType: 1 },
+  {
+    permissionName: "权限列表",
+    permissionCode: "permission:list",
+    permissionType: 1,
+  },
+  {
+    permissionName: "创建权限",
+    permissionCode: "permission:create",
+    permissionType: 1,
+  },
+  {
+    permissionName: "编辑权限",
+    permissionCode: "permission:update",
+    permissionType: 1,
+  },
+  {
+    permissionName: "删除权限",
+    permissionCode: "permission:delete",
+    permissionType: 1,
+  },
 ];
 
 const API_PERMISSIONS: PermissionSeed[] = [

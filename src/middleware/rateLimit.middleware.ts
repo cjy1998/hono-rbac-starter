@@ -17,9 +17,7 @@ const getClientIp = (c: Context<AppEnv>) => {
     return forwardedFor.split(",")[0]?.trim() || "unknown";
   }
   return (
-    c.req.header("x-real-ip") ||
-    c.req.header("cf-connecting-ip") ||
-    "unknown"
+    c.req.header("x-real-ip") || c.req.header("cf-connecting-ip") || "unknown"
   );
 };
 
@@ -38,7 +36,10 @@ export const createRateLimit = (options: RateLimitOptions) =>
     const count = await redis.zcard(key);
 
     c.header("X-RateLimit-Limit", String(options.limit));
-    c.header("X-RateLimit-Remaining", String(Math.max(options.limit - count, 0)));
+    c.header(
+      "X-RateLimit-Remaining",
+      String(Math.max(options.limit - count, 0)),
+    );
 
     if (count >= options.limit) {
       c.header("Retry-After", String(Math.ceil(options.windowMs / 1000)));

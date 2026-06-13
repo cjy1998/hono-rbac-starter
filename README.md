@@ -274,40 +274,40 @@ After running `pnpm db:seed`, the following accounts are inserted automatically:
 
 ### User
 
-| Method | Path                 | Auth | Parameters                                       | Description                                       |
-| ------ | -------------------- | ---- | ------------------------------------------------ | ------------------------------------------------- |
+| Method | Path                 | Auth | Parameters                                       | Description                                           |
+| ------ | -------------------- | ---- | ------------------------------------------------ | ----------------------------------------------------- |
 | POST   | `/user/login`        | -    | `{ email, password }` (json)                     | Login, returns user + token (protected by rate limit) |
-| POST   | `/user/logout`       | JWT  | -                                                | Logout, adds current token to blacklist           |
-| POST   | `/user`              | JWT  | `{ username, nickname, email, password }` (json) | Create a user                                     |
-| GET    | `/user`              | JWT  | `?page&pageSize&username&email` (query)          | Pagination + username/email search                |
-| GET    | `/user/:id`          | JWT  | `id` (param, UUID format)                        | Get a single user                                 |
-| PUT    | `/user/:id`          | JWT  | `id` (param) + partial user fields (json)        | Update a user, also clears Redis cache            |
-| PUT    | `/user/:id/password` | JWT  | `id` (param) + `{ password }` (json)             | Change password, also clears Redis cache          |
-| DELETE | `/user/:id`          | JWT  | `id` (param, UUID format)                        | Soft-delete a user, also clears cache             |
-| POST   | `/user/:id/roles`    | JWT  | `id` (param) + `{ roleIds: string[] }` (json)    | Bind user-role associations (idempotent batch)    |
-| DELETE | `/user/:id/roles`    | JWT  | `id` (param) + `{ roleIds: string[] }` (json)    | Unbind user-role associations (batch)             |
+| POST   | `/user/logout`       | JWT  | -                                                | Logout, adds current token to blacklist               |
+| POST   | `/user`              | JWT  | `{ username, nickname, email, password }` (json) | Create a user                                         |
+| GET    | `/user`              | JWT  | `?page&pageSize&username&email` (query)          | Pagination + username/email search                    |
+| GET    | `/user/:id`          | JWT  | `id` (param, UUID format)                        | Get a single user                                     |
+| PUT    | `/user/:id`          | JWT  | `id` (param) + partial user fields (json)        | Update a user, also clears Redis cache                |
+| PUT    | `/user/:id/password` | JWT  | `id` (param) + `{ password }` (json)             | Change password, also clears Redis cache              |
+| DELETE | `/user/:id`          | JWT  | `id` (param, UUID format)                        | Soft-delete a user, also clears cache                 |
+| POST   | `/user/:id/roles`    | JWT  | `id` (param) + `{ roleIds: string[] }` (json)    | Bind user-role associations (idempotent batch)        |
+| DELETE | `/user/:id/roles`    | JWT  | `id` (param) + `{ roleIds: string[] }` (json)    | Unbind user-role associations (batch)                 |
 
 ### Role
 
-| Method | Path                      | Auth | Parameters                                                 | Description                                      |
-| ------ | ------------------------- | ---- | ---------------------------------------------------------- | ------------------------------------------------ |
-| POST   | `/role`                   | JWT  | role payload (json)                                        | Create role                                      |
-| GET    | `/role`                   | JWT  | role filters + pagination (query)                          | List roles                                       |
-| GET    | `/role/:id`               | JWT  | `id` (param)                                               | Get role details                                 |
-| PUT    | `/role/:id`               | JWT  | `id` (param) + role fields (json)                          | Update role                                      |
-| DELETE | `/role/:id`               | JWT  | `id` (param)                                               | Soft-delete role                                 |
-| POST   | `/role/:id/permissions`   | JWT  | `id` (param) + `{ permissionIds: string[] }` (json)        | Bind role-permission associations (batch)        |
-| DELETE | `/role/:id/permissions`   | JWT  | `id` (param) + `{ permissionIds: string[] }` (json)        | Unbind role-permission associations (batch)      |
-| POST   | `/role/:id/menus`         | JWT  | `id` (param) + `{ menuIds: string[] }` (json)              | Bind role-menu associations (batch)              |
-| DELETE | `/role/:id/menus`         | JWT  | `id` (param) + `{ menuIds: string[] }` (json)              | Unbind role-menu associations (batch)            |
+| Method | Path                    | Auth | Parameters                                          | Description                                 |
+| ------ | ----------------------- | ---- | --------------------------------------------------- | ------------------------------------------- |
+| POST   | `/role`                 | JWT  | role payload (json)                                 | Create role                                 |
+| GET    | `/role`                 | JWT  | role filters + pagination (query)                   | List roles                                  |
+| GET    | `/role/:id`             | JWT  | `id` (param)                                        | Get role details                            |
+| PUT    | `/role/:id`             | JWT  | `id` (param) + role fields (json)                   | Update role                                 |
+| DELETE | `/role/:id`             | JWT  | `id` (param)                                        | Soft-delete role                            |
+| POST   | `/role/:id/permissions` | JWT  | `id` (param) + `{ permissionIds: string[] }` (json) | Bind role-permission associations (batch)   |
+| DELETE | `/role/:id/permissions` | JWT  | `id` (param) + `{ permissionIds: string[] }` (json) | Unbind role-permission associations (batch) |
+| POST   | `/role/:id/menus`       | JWT  | `id` (param) + `{ menuIds: string[] }` (json)       | Bind role-menu associations (batch)         |
+| DELETE | `/role/:id/menus`       | JWT  | `id` (param) + `{ menuIds: string[] }` (json)       | Unbind role-menu associations (batch)       |
 
 ### Permission and Menu
 
-| Method | Path                   | Auth | Description                    |
-| ------ | ---------------------- | ---- | ------------------------------ |
-| CRUD   | `/permissions`         | JWT  | Permission CRUD                |
-| CRUD   | `/menu`                | JWT  | Menu CRUD                      |
-| GET    | `/menu/tree`           | JWT  | Query menu tree                |
+| Method | Path           | Auth | Description     |
+| ------ | -------------- | ---- | --------------- |
+| CRUD   | `/permissions` | JWT  | Permission CRUD |
+| CRUD   | `/menu`        | JWT  | Menu CRUD       |
+| GET    | `/menu/tree`   | JWT  | Query menu tree |
 
 > All endpoints follow a unified response format:
 >
@@ -350,16 +350,16 @@ curl -X POST http://localhost:3000/user/logout \
 
 The project addresses cross-cutting concerns such as authentication, caching, and request tracing through Hono middleware, all located in `src/middleware/`:
 
-| Middleware         | Description                                                                                                                                                                   |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Middleware         | Description                                                                                                                                                                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `jwtAuth`          | JWT parsing and verification; on success, writes the typed user payload into `c.set("user", payload)` and the raw token into `c.set("token", token)`. It also checks the Redis blacklist so logged-out tokens cannot be reused before they naturally expire |
-| `roleAuth`         | Role / permission authorization; based on `c.get("user")`, calls the permissions service to check whether the current user has the required role or API permission           |
-| `redis.middleware` | Role/permission caching middleware. On Redis cache hit it reuses the cached value; on miss it falls back to the database and writes the result back, reducing RBAC query load |
-| `securityHeaders`  | Sets security-related response headers globally, including `CSP`, `X-Frame-Options`, and `X-Content-Type-Options`                                                           |
-| `xssProtection`    | Performs basic XSS payload checks on request params/query/json body and rejects suspicious inputs                                                                            |
-| `rateLimit`        | Redis sliding-window rate limit middleware, currently applied to `/user/login` to prevent brute-force attacks                                                                |
-| `zValidator`       | Request parameter validation based on `@hono/zod-validator`; on failure throws a unified `ValidationException`                                                                |
-| `requestLogger`    | Generates / propagates `x-request-id` and writes per-request trace logs                                                                                                       |
+| `roleAuth`         | Role / permission authorization; based on `c.get("user")`, calls the permissions service to check whether the current user has the required role or API permission                                                                                          |
+| `redis.middleware` | Role/permission caching middleware. On Redis cache hit it reuses the cached value; on miss it falls back to the database and writes the result back, reducing RBAC query load                                                                               |
+| `securityHeaders`  | Sets security-related response headers globally, including `CSP`, `X-Frame-Options`, and `X-Content-Type-Options`                                                                                                                                           |
+| `xssProtection`    | Performs basic XSS payload checks on request params/query/json body and rejects suspicious inputs                                                                                                                                                           |
+| `rateLimit`        | Redis sliding-window rate limit middleware, currently applied to `/user/login` to prevent brute-force attacks                                                                                                                                               |
+| `zValidator`       | Request parameter validation based on `@hono/zod-validator`; on failure throws a unified `ValidationException`                                                                                                                                              |
+| `requestLogger`    | Generates / propagates `x-request-id` and writes per-request trace logs                                                                                                                                                                                     |
 
 ### Redis Cache
 

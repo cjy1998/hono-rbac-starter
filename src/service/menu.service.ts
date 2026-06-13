@@ -107,7 +107,9 @@ class MenuService {
       .where(this.buildMenuWhere(query))
       .orderBy(asc(menusTable.sortOrder), asc(menusTable.createdAt));
 
-    return this.buildTree(rows.map((row) => ({ ...toMenuVO(row), children: [] })));
+    return this.buildTree(
+      rows.map((row) => ({ ...toMenuVO(row), children: [] })),
+    );
   }
 
   /**

@@ -107,5 +107,4 @@ permissionsController.get(
     return ok(c, permission);
   },
 );
-
 export default permissionsController;

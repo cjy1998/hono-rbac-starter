@@ -5,6 +5,10 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/src/index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "db:g": "drizzle-kit generate",
     "db:m": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts"
@@ -24,9 +28,15 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.11.17",
     "drizzle-kit": "^0.31.10",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.4",
     "tsx": "^4.7.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.61.0"
   }
 }

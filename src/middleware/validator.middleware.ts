@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- 对 @hono/zod-validator 做透传式泛型包装，保留其复杂的重载签名，这里必须使用 any */
 import { zValidator as zv } from "@hono/zod-validator";
 import { ValidationException } from "../exceptions/validation.exception.js";
 import type { ZodError } from "zod";

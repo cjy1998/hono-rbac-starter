@@ -217,6 +217,7 @@ ALLOWED_ORIGINS=*
 RATE_LIMIT_LOGIN_MAX=5
 RATE_LIMIT_LOGIN_WINDOW_SEC=60
 ```
+
 详见`.env.example`
 
 ### 4. 创建数据库并执行迁移
@@ -273,40 +274,40 @@ pnpm dev
 
 ### 用户接口
 
-| Method | Path                 | 鉴权 | 入参                                             | 说明                                           |
-| ------ | -------------------- | ---- | ------------------------------------------------ | ---------------------------------------------- |
-| POST   | `/user/login`        | -    | `{ email, password }` (json)                     | 登录，返回 user + token（已接入限流）          |
-| POST   | `/user/logout`       | JWT  | -                                                | 登出，将当前 token 加入黑名单                  |
-| POST   | `/user`              | JWT  | `{ username, nickname, email, password }` (json) | 创建用户                                       |
-| GET    | `/user`              | JWT  | `?page&pageSize&username&email` (query)          | 分页 + 用户名/邮箱搜索                         |
-| GET    | `/user/:id`          | JWT  | `id` (param，UUID 格式)                          | 查询单个用户                                   |
-| PUT    | `/user/:id`          | JWT  | `id` (param) + 用户字段（json，部分可选）        | 更新用户信息，同时清理 Redis 缓存              |
-| PUT    | `/user/:id/password` | JWT  | `id` (param) + `{ password }` (json)             | 修改密码，同时清理 Redis 缓存                  |
-| DELETE | `/user/:id`          | JWT  | `id` (param，UUID 格式)                          | 软删除用户，同时清理 Redis 缓存                |
-| POST   | `/user/:id/roles`    | JWT  | `id` (param) + `{ roleIds: string[] }` (json)    | 批量绑定用户-角色（幂等）                      |
-| DELETE | `/user/:id/roles`    | JWT  | `id` (param) + `{ roleIds: string[] }` (json)    | 批量解绑用户-角色                              |
+| Method | Path                 | 鉴权 | 入参                                             | 说明                                  |
+| ------ | -------------------- | ---- | ------------------------------------------------ | ------------------------------------- |
+| POST   | `/user/login`        | -    | `{ email, password }` (json)                     | 登录，返回 user + token（已接入限流） |
+| POST   | `/user/logout`       | JWT  | -                                                | 登出，将当前 token 加入黑名单         |
+| POST   | `/user`              | JWT  | `{ username, nickname, email, password }` (json) | 创建用户                              |
+| GET    | `/user`              | JWT  | `?page&pageSize&username&email` (query)          | 分页 + 用户名/邮箱搜索                |
+| GET    | `/user/:id`          | JWT  | `id` (param，UUID 格式)                          | 查询单个用户                          |
+| PUT    | `/user/:id`          | JWT  | `id` (param) + 用户字段（json，部分可选）        | 更新用户信息，同时清理 Redis 缓存     |
+| PUT    | `/user/:id/password` | JWT  | `id` (param) + `{ password }` (json)             | 修改密码，同时清理 Redis 缓存         |
+| DELETE | `/user/:id`          | JWT  | `id` (param，UUID 格式)                          | 软删除用户，同时清理 Redis 缓存       |
+| POST   | `/user/:id/roles`    | JWT  | `id` (param) + `{ roleIds: string[] }` (json)    | 批量绑定用户-角色（幂等）             |
+| DELETE | `/user/:id/roles`    | JWT  | `id` (param) + `{ roleIds: string[] }` (json)    | 批量解绑用户-角色                     |
 
 ### 角色接口
 
-| Method | Path                    | 鉴权 | 入参                                                | 说明                         |
-| ------ | ----------------------- | ---- | --------------------------------------------------- | ---------------------------- |
-| POST   | `/role`                 | JWT  | role 字段（json）                                   | 创建角色                     |
-| GET    | `/role`                 | JWT  | 角色筛选 + 分页（query）                            | 角色列表                     |
-| GET    | `/role/:id`             | JWT  | `id` (param)                                        | 查询单个角色                 |
-| PUT    | `/role/:id`             | JWT  | `id` + role 字段（json）                            | 更新角色                     |
-| DELETE | `/role/:id`             | JWT  | `id` (param)                                        | 软删除角色                   |
-| POST   | `/role/:id/permissions` | JWT  | `id` + `{ permissionIds: string[] }` (json)         | 批量绑定角色-权限            |
-| DELETE | `/role/:id/permissions` | JWT  | `id` + `{ permissionIds: string[] }` (json)         | 批量解绑角色-权限            |
-| POST   | `/role/:id/menus`       | JWT  | `id` + `{ menuIds: string[] }` (json)               | 批量绑定角色-菜单            |
-| DELETE | `/role/:id/menus`       | JWT  | `id` + `{ menuIds: string[] }` (json)               | 批量解绑角色-菜单            |
+| Method | Path                    | 鉴权 | 入参                                        | 说明              |
+| ------ | ----------------------- | ---- | ------------------------------------------- | ----------------- |
+| POST   | `/role`                 | JWT  | role 字段（json）                           | 创建角色          |
+| GET    | `/role`                 | JWT  | 角色筛选 + 分页（query）                    | 角色列表          |
+| GET    | `/role/:id`             | JWT  | `id` (param)                                | 查询单个角色      |
+| PUT    | `/role/:id`             | JWT  | `id` + role 字段（json）                    | 更新角色          |
+| DELETE | `/role/:id`             | JWT  | `id` (param)                                | 软删除角色        |
+| POST   | `/role/:id/permissions` | JWT  | `id` + `{ permissionIds: string[] }` (json) | 批量绑定角色-权限 |
+| DELETE | `/role/:id/permissions` | JWT  | `id` + `{ permissionIds: string[] }` (json) | 批量解绑角色-权限 |
+| POST   | `/role/:id/menus`       | JWT  | `id` + `{ menuIds: string[] }` (json)       | 批量绑定角色-菜单 |
+| DELETE | `/role/:id/menus`       | JWT  | `id` + `{ menuIds: string[] }` (json)       | 批量解绑角色-菜单 |
 
 ### 权限与菜单接口
 
-| Method | Path           | 鉴权 | 说明             |
-| ------ | -------------- | ---- | ---------------- |
-| CRUD   | `/permissions` | JWT  | 权限管理         |
-| CRUD   | `/menu`        | JWT  | 菜单管理         |
-| GET    | `/menu/tree`   | JWT  | 菜单树查询       |
+| Method | Path           | 鉴权 | 说明       |
+| ------ | -------------- | ---- | ---------- |
+| CRUD   | `/permissions` | JWT  | 权限管理   |
+| CRUD   | `/menu`        | JWT  | 菜单管理   |
+| GET    | `/menu/tree`   | JWT  | 菜单树查询 |
 
 > 所有接口的响应都遵循统一格式：
 >
@@ -349,16 +350,16 @@ curl -X POST http://localhost:3000/user/logout \
 
 项目通过 Hono 中间件实现鉴权、缓存与请求追踪等横切关注点，均位于 `src/middleware/`：
 
-| 中间件             | 说明                                                                                                       |
-| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| 中间件             | 说明                                                                                                                                                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `jwtAuth`          | JWT 解析与校验，校验通过后把用户 payload 写入 `c.set("user", payload)`，把原始 token 写入 `c.set("token", token)`；同时检查 Redis 黑名单，避免已登出的 token 在自然过期前继续使用 |
-| `roleAuth`         | 角色 / 权限鉴权，基于 `c.get("user")` 调用 `permissions` 服务校验当前用户是否具备指定角色编码或 API 权限    |
-| `redis.middleware` | 角色权限缓存中间件，命中 Redis 缓存时直接复用，未命中则回源数据库并回写缓存，降低 RBAC 查询压力            |
-| `securityHeaders`  | 全局写入安全响应头（CSP、X-Frame-Options、X-Content-Type-Options 等）                                       |
-| `xssProtection`    | 对 query/param/json 做基础 XSS payload 检测，命中后拒绝请求                                                  |
-| `rateLimit`        | 基于 Redis ZSet 滑动窗口限流，当前用于 `/user/login` 防暴力破解                                               |
-| `zValidator`       | 基于 `@hono/zod-validator` 的请求参数校验，校验失败抛出统一的 `ValidationException`                        |
-| `requestLogger`    | 生成 / 透传 `x-request-id`，并按请求维度记录链路日志                                                       |
+| `roleAuth`         | 角色 / 权限鉴权，基于 `c.get("user")` 调用 `permissions` 服务校验当前用户是否具备指定角色编码或 API 权限                                                                          |
+| `redis.middleware` | 角色权限缓存中间件，命中 Redis 缓存时直接复用，未命中则回源数据库并回写缓存，降低 RBAC 查询压力                                                                                   |
+| `securityHeaders`  | 全局写入安全响应头（CSP、X-Frame-Options、X-Content-Type-Options 等）                                                                                                             |
+| `xssProtection`    | 对 query/param/json 做基础 XSS payload 检测，命中后拒绝请求                                                                                                                       |
+| `rateLimit`        | 基于 Redis ZSet 滑动窗口限流，当前用于 `/user/login` 防暴力破解                                                                                                                   |
+| `zValidator`       | 基于 `@hono/zod-validator` 的请求参数校验，校验失败抛出统一的 `ValidationException`                                                                                               |
+| `requestLogger`    | 生成 / 透传 `x-request-id`，并按请求维度记录链路日志                                                                                                                              |
 
 ### Redis 缓存
 

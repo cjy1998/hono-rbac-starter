@@ -1,4 +1,4 @@
-import { count, isNull, type SQL } from "drizzle-orm";
+import { type Column, count, isNull, type SQL } from "drizzle-orm";
 import type { MySqlTable } from "drizzle-orm/mysql-core";
 import db from "../db/index.js";
 import type { PaginatedVO } from "../vo/common.vo.js";
@@ -6,7 +6,7 @@ import type { PaginatedVO } from "../vo/common.vo.js";
 /**
  * 软删除过滤条件：过滤掉 deletedAt 不为 null 的记录
  */
-export const notDeleted = (table: { deletedAt: any }): SQL =>
+export const notDeleted = (table: { deletedAt: Column }): SQL =>
   isNull(table.deletedAt);
 
 interface PaginateOptions {

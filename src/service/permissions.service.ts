@@ -27,7 +27,10 @@ class PermissionsService {
       throw new HTTPException(HTTP_STATUS.BAD_REQUEST, {
         message: "权限编码已存在",
       });
-    const result = await db.insert(permissionsTable).values(permission).$returningId();
+    const result = await db
+      .insert(permissionsTable)
+      .values(permission)
+      .$returningId();
     const resultPermission = await this.getExistingPermissionById(result[0].id);
     return toPermissionVO(resultPermission);
   }

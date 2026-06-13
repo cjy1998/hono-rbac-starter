@@ -197,7 +197,10 @@ userController.get(
       );
       return ok(c, user);
     } catch (err) {
-      if (err instanceof HTTPException && err.status === HTTP_STATUS.NOT_FOUND) {
+      if (
+        err instanceof HTTPException &&
+        err.status === HTTP_STATUS.NOT_FOUND
+      ) {
         await redis.set(
           cacheKey,
           CACHE_NULL_VALUE,
