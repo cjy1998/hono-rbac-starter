@@ -23,6 +23,11 @@ export const getTokenBlacklistKey = (token: string) => {
 export const getTokenTtl = (exp: number) =>
   Math.max(exp - Math.floor(Date.now() / 1000), 0);
 
+/**
+ * 用户 tokenVersion 缓存 key。
+ */
+export const getTokenVersionKey = (userId: string) => `user:tv:${userId}`;
+
 const TIME_UNITS_IN_SECONDS: Record<string, number> = {
   s: 1,
   m: 60,

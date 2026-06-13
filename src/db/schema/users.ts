@@ -1,4 +1,10 @@
-import { index, mysqlTable, tinyint, varchar } from "drizzle-orm/mysql-core";
+import {
+  index,
+  int,
+  mysqlTable,
+  tinyint,
+  varchar,
+} from "drizzle-orm/mysql-core";
 import { commonSchema } from "./common.js";
 
 export const usersTable = mysqlTable(
@@ -16,6 +22,10 @@ export const usersTable = mysqlTable(
      * 1: 启用
      */
     status: tinyint().notNull().default(1),
+    /**
+     * 令牌版本号。改密 / 全端登出时递增，使此前签发的所有 JWT 立即失效。
+     */
+    tokenVersion: int("token_version").notNull().default(0),
   },
   (table) => [
     index("idx_email").on(table.email),

@@ -1,4 +1,4 @@
-import { and, eq, inArray, like, ne } from "drizzle-orm";
+import { and, eq, inArray, like, ne, sql } from "drizzle-orm";
 import { sign } from "hono/jwt";
 import argon2 from "argon2";
 import db from "../db/index.js";
@@ -103,11 +103,39 @@ class UserService {
       }
     }
     const storageHash = await argon2.hash(dto.password);
+    // 改密同时递增 tokenVersion，使改密前签发的所有 token 立即失效。
     await db
       .update(usersTable)
-      .set({ password: storageHash })
+      .set({
+        password: storageHash,
+        tokenVersion: sql`${usersTable.tokenVersion} + 1`,
+      })
       .where(and(notDeleted(usersTable), eq(usersTable.id, id)));
     return null;
+  }
+
+  /**
+   * 全端登出：递增 tokenVersion，使该用户已签发的所有 token 立即失效。
+   */
+  async invalidateAllSessions(id: string): Promise<null> {
+    await this.getExistingUserById(id);
+    await db
+      .update(usersTable)
+      .set({ tokenVersion: sql`${usersTable.tokenVersion} + 1` })
+      .where(and(notDeleted(usersTable), eq(usersTable.id, id)));
+    return null;
+  }
+
+  /**
+   * 读取用户当前的 tokenVersion，用户不存在 / 已软删返回 null。
+   */
+  async getTokenVersion(id: string): Promise<number | null> {
+    const rows = await db
+      .select({ tokenVersion: usersTable.tokenVersion })
+      .from(usersTable)
+      .where(and(notDeleted(usersTable), eq(usersTable.id, id)))
+      .limit(1);
+    return rows.length > 0 ? rows[0].tokenVersion : null;
   }
   /**
    * 获取用户列表
@@ -311,6 +339,7 @@ class UserService {
       id: user.id,
       username: user.username,
       email: user.email,
+      tokenVersion: user.tokenVersion,
       exp:
         Math.floor(Date.now() / 1000) +
         parseJwtExpiresInSeconds(env.JWT_EXPIRES_IN),

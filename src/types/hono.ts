@@ -12,6 +12,8 @@ export type UserPayload = {
   id: string;
   username: string;
   email: string;
+  /** 令牌版本号，用于改密 / 全端登出后使旧 token 失效 */
+  tokenVersion: number;
   exp: number;
 };
 

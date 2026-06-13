@@ -14,7 +14,11 @@ import { fail, ok } from "../utils/response.js";
 import { jwtAuth } from "../middleware/jwtAuth.middleware.js";
 import { roleAuth } from "../middleware/roleAuth.middleware.js";
 import { idSchema, roleIdsSchema } from "../dto/common.dto.js";
-import { getTokenBlacklistKey, getTokenTtl } from "../utils/token.js";
+import {
+  getTokenBlacklistKey,
+  getTokenTtl,
+  getTokenVersionKey,
+} from "../utils/token.js";
 import { createRateLimit } from "../middleware/rateLimit.middleware.js";
 import { env } from "../env.js";
 import { HTTP_STATUS } from "../utils/const.js";
@@ -25,7 +29,7 @@ import { requireUser } from "../utils/auth.js";
 const userController = new Hono();
 
 const clearUserCache = async (redis: Redis, id: string) => {
-  await redis.del(`user:${id}`, `user:roles:${id}`);
+  await redis.del(`user:${id}`, `user:roles:${id}`, getTokenVersionKey(id));
 };
 
 const loginRateLimit = createRateLimit({
@@ -258,6 +262,16 @@ userController.post("/logout", jwtAuth, async (c) => {
     }
   }
   return ok(c, null);
+});
+
+/**
+ * 全端登出 - 递增 tokenVersion，使当前用户已签发的所有 token 立即失效
+ */
+userController.post("/logout-all", jwtAuth, async (c) => {
+  const user = requireUser(c);
+  const result = await userService.invalidateAllSessions(user.id);
+  await clearUserCache(c.get("redis"), user.id);
+  return ok(c, result);
 });
 
 export default userController;
