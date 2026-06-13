@@ -1,7 +1,9 @@
-import { and, asc, eq, like } from "drizzle-orm";
+import { and, asc, eq, inArray, like } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import db from "../db/index.js";
 import { menusTable } from "../db/schema/menus.js";
+import { roleMenuTable } from "../db/schema/role_menu.js";
+import { userRoleTable } from "../db/schema/user_role.js";
 import type {
   CreateMenuDTO,
   MenuQueryDTO,
@@ -16,6 +18,8 @@ import {
   type MenuTreeVO,
   type MenuVO,
 } from "../vo/menu.vo.js";
+
+const SUPER_ADMIN_CODE = "super_admin";
 
 class MenuService {
   /**
@@ -104,6 +108,61 @@ class MenuService {
       .orderBy(asc(menusTable.sortOrder), asc(menusTable.createdAt));
 
     return this.buildTree(rows.map((row) => ({ ...toMenuVO(row), children: [] })));
+  }
+
+  /**
+   * 获取当前登录用户可见的菜单树
+   * - 超级管理员：返回全部启用菜单
+   * - 其他角色：仅返回其角色经 role_menu 关联的启用菜单
+   * - 无任何角色：返回空数组
+   */
+  async getUserMenuTree(userId: string): Promise<MenuTreeVO[]> {
+    const userRoles = await db.query.userRoleTable.findMany({
+      where: eq(userRoleTable.userId, userId),
+      with: { role: true },
+    });
+
+    const roleIds = userRoles.map((ur) => ur.roleId);
+    const isSuperAdmin = userRoles.some(
+      (ur) => ur.role.roleCode === SUPER_ADMIN_CODE,
+    );
+
+    if (isSuperAdmin) {
+      const rows = await db
+        .select()
+        .from(menusTable)
+        .where(and(notDeleted(menusTable), eq(menusTable.status, 1)))
+        .orderBy(asc(menusTable.sortOrder), asc(menusTable.createdAt));
+      return this.buildTree(
+        rows.map((row) => ({ ...toMenuVO(row), children: [] })),
+      );
+    }
+
+    if (roleIds.length === 0) return [];
+
+    const rows = await db
+      .select({ menu: menusTable })
+      .from(roleMenuTable)
+      .innerJoin(menusTable, eq(roleMenuTable.menuId, menusTable.id))
+      .where(
+        and(
+          inArray(roleMenuTable.roleId, roleIds),
+          notDeleted(menusTable),
+          eq(menusTable.status, 1),
+        ),
+      )
+      .orderBy(asc(menusTable.sortOrder), asc(menusTable.createdAt));
+
+    // 多角色可能关联同一菜单，按 id 去重
+    const seen = new Set<string>();
+    const unique: MenuTreeVO[] = [];
+    for (const { menu } of rows) {
+      if (seen.has(menu.id)) continue;
+      seen.add(menu.id);
+      unique.push({ ...toMenuVO(menu), children: [] });
+    }
+
+    return this.buildTree(unique);
   }
 
   /**

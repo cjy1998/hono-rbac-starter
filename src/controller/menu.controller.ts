@@ -11,6 +11,7 @@ import { roleAuth } from "../middleware/roleAuth.middleware.js";
 import { zValidator } from "../middleware/validator.middleware.js";
 import menuService from "../service/menu.service.js";
 import { ok } from "../utils/response.js";
+import { requireUser } from "../utils/auth.js";
 
 const menuController = new Hono();
 
@@ -43,6 +44,15 @@ menuController.get(
     return ok(c, result);
   },
 );
+
+/**
+ * 获取当前登录用户可见的菜单树（按角色过滤，仅需登录）
+ */
+menuController.get("/mine", jwtAuth, async (c) => {
+  const user = requireUser(c);
+  const result = await menuService.getUserMenuTree(user.id);
+  return ok(c, result);
+});
 
 /**
  * 获取菜单列表

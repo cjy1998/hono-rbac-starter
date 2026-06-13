@@ -10,6 +10,7 @@ import type { AppEnv } from "../types/hono.js";
 import userService from "../service/user.service.js";
 import permissionsService from "../service/permissions.service.js";
 import { getTtlWithJitter } from "../utils/cache.js";
+import { requireUser } from "../utils/auth.js";
 
 const SUPER_ADMIN_CODE = "super_admin";
 const ROLES_TTL = 300; // 5 分钟（实际会叠加随机抖动）
@@ -20,12 +21,7 @@ type Permissions = Awaited<
 >;
 
 export const roleAuth = createMiddleware<AppEnv>(async (c, next) => {
-  const user = c.get("user");
-  if (!user) {
-    throw new HTTPException(HTTP_STATUS.UNAUTHORIZED, {
-      message: "未登录",
-    });
-  }
+  const user = requireUser(c);
 
   const redis = c.get("redis");
 

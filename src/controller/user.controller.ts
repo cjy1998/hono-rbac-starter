@@ -20,6 +20,7 @@ import { env } from "../env.js";
 import { HTTP_STATUS } from "../utils/const.js";
 import { CACHE_NULL_VALUE, getTtlWithJitter } from "../utils/cache.js";
 import type { AppEnv } from "../types/hono.js";
+import { requireUser } from "../utils/auth.js";
 
 const userController = new Hono();
 
@@ -37,12 +38,7 @@ const USER_CACHE_TTL = 3600;
 const USER_CACHE_NULL_TTL = 60;
 
 const assertPrivilegedOperator = async (c: Context<AppEnv>) => {
-  const operator = c.get("user");
-  if (!operator) {
-    throw new HTTPException(HTTP_STATUS.UNAUTHORIZED, {
-      message: "未登录",
-    });
-  }
+  const operator = requireUser(c);
   const isPrivileged = await userService.isPrivilegedUser(operator.id);
   if (!isPrivileged) {
     throw new HTTPException(HTTP_STATUS.FORBIDDEN, {
@@ -56,12 +52,7 @@ const assertSelfOrPrivilegedOperator = async (
   c: Context<AppEnv>,
   targetUserId: string,
 ) => {
-  const operator = c.get("user");
-  if (!operator) {
-    throw new HTTPException(HTTP_STATUS.UNAUTHORIZED, {
-      message: "未登录",
-    });
-  }
+  const operator = requireUser(c);
   if (operator.id === targetUserId) {
     return { operator, isSelf: true, isPrivileged: false };
   }
