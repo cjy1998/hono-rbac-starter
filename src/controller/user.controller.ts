@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { Redis } from "ioredis";
 import { zValidator } from "../middleware/validator.middleware.js";
@@ -19,6 +19,7 @@ import { createRateLimit } from "../middleware/rateLimit.middleware.js";
 import { env } from "../env.js";
 import { HTTP_STATUS } from "../utils/const.js";
 import { CACHE_NULL_VALUE, getTtlWithJitter } from "../utils/cache.js";
+import type { AppEnv } from "../types/hono.js";
 
 const userController = new Hono();
 
@@ -34,14 +35,54 @@ const loginRateLimit = createRateLimit({
 });
 const USER_CACHE_TTL = 3600;
 const USER_CACHE_NULL_TTL = 60;
+
+const assertPrivilegedOperator = async (c: Context<AppEnv>) => {
+  const operator = c.get("user");
+  if (!operator) {
+    throw new HTTPException(HTTP_STATUS.UNAUTHORIZED, {
+      message: "未登录",
+    });
+  }
+  const isPrivileged = await userService.isPrivilegedUser(operator.id);
+  if (!isPrivileged) {
+    throw new HTTPException(HTTP_STATUS.FORBIDDEN, {
+      message: "没有权限执行该操作",
+    });
+  }
+  return operator;
+};
+
+const assertSelfOrPrivilegedOperator = async (
+  c: Context<AppEnv>,
+  targetUserId: string,
+) => {
+  const operator = c.get("user");
+  if (!operator) {
+    throw new HTTPException(HTTP_STATUS.UNAUTHORIZED, {
+      message: "未登录",
+    });
+  }
+  if (operator.id === targetUserId) {
+    return { operator, isSelf: true, isPrivileged: false };
+  }
+  const isPrivileged = await userService.isPrivilegedUser(operator.id);
+  if (!isPrivileged) {
+    throw new HTTPException(HTTP_STATUS.FORBIDDEN, {
+      message: "只能操作自己的账号",
+    });
+  }
+  return { operator, isSelf: false, isPrivileged: true };
+};
 /**
  * 创建用户
  */
 userController.post(
   "/",
   jwtAuth,
+  roleAuth,
   zValidator("json", createUserSchema),
   async (c) => {
+    await assertPrivilegedOperator(c);
     const user = c.req.valid("json");
     const result = await userService.createUser(user);
     return ok(c, result);
@@ -53,8 +94,10 @@ userController.post(
 userController.delete(
   "/:id",
   jwtAuth,
+  roleAuth,
   zValidator("param", idSchema),
   async (c) => {
+    await assertPrivilegedOperator(c);
     const { id } = c.req.valid("param");
     const result = await userService.deleteUser(id);
     await clearUserCache(c.get("redis"), id);
@@ -67,9 +110,11 @@ userController.delete(
 userController.put(
   "/:id",
   jwtAuth,
+  roleAuth,
   zValidator("param", idSchema),
   zValidator("json", updateUserSchema),
   async (c) => {
+    await assertPrivilegedOperator(c);
     const { id } = c.req.valid("param");
     const dto = c.req.valid("json");
     const result = await userService.updateUser(id, dto);
@@ -135,6 +180,7 @@ userController.get(
   zValidator("param", idSchema),
   async (c) => {
     const { id } = c.req.valid("param");
+    await assertSelfOrPrivilegedOperator(c, id);
     const redis = c.get("redis");
     const cacheKey = `user:${id}`;
     const cached = await redis.get(cacheKey);
@@ -179,6 +225,12 @@ userController.put(
   async (c) => {
     const { id } = c.req.valid("param");
     const dto = c.req.valid("json");
+    const { isSelf } = await assertSelfOrPrivilegedOperator(c, id);
+    if (isSelf && !dto.oldPassword) {
+      throw new HTTPException(HTTP_STATUS.BAD_REQUEST, {
+        message: "修改自己的密码时必须提供旧密码",
+      });
+    }
     const result = await userService.updatePassword(id, dto);
     await clearUserCache(c.get("redis"), id);
     return ok(c, result);

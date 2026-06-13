@@ -18,8 +18,10 @@ import {
 
 const roleController = new Hono();
 
-const clearUserCache = async (redis: Redis, id: string) => {
-  await redis.del(`user:${id}`, `user:roles:${id}`);
+const clearUsersCache = async (redis: Redis, userIds: string[]) => {
+  if (userIds.length === 0) return;
+  const keys = userIds.flatMap((userId) => [`user:${userId}`, `user:roles:${userId}`]);
+  await redis.del(...keys);
 };
 
 const clearPermissionsCache = async (redis: Redis) => {
@@ -62,8 +64,9 @@ roleController.delete(
   zValidator("param", idSchema),
   async (c) => {
     const { id } = c.req.valid("param");
+    const affectedUserIds = await roleService.getUserIdsByRoleId(id);
     const result = await roleService.deleteRole(id);
-    await clearUserCache(c.get("redis"), id);
+    await clearUsersCache(c.get("redis"), affectedUserIds);
     return ok(c, result);
   },
 );
@@ -79,8 +82,9 @@ roleController.put(
   async (c) => {
     const { id } = c.req.valid("param");
     const dto = c.req.valid("json");
+    const affectedUserIds = await roleService.getUserIdsByRoleId(id);
     const result = await roleService.updateRole(id, dto);
-    await clearUserCache(c.get("redis"), id);
+    await clearUsersCache(c.get("redis"), affectedUserIds);
     return ok(c, result);
   },
 );

@@ -41,7 +41,15 @@ const ROLES = [
  * 权限定义（按钮 / API 权限）
  * permissionType: 1-按钮  2-API
  */
-const PERMISSIONS = [
+type PermissionSeed = {
+  permissionName: string;
+  permissionCode: string;
+  permissionType: number;
+  resource?: string;
+  method?: string;
+};
+
+const BUTTON_PERMISSIONS: PermissionSeed[] = [
   { permissionName: "用户列表", permissionCode: "user:list", permissionType: 1 },
   { permissionName: "创建用户", permissionCode: "user:create", permissionType: 1 },
   { permissionName: "编辑用户", permissionCode: "user:update", permissionType: 1 },
@@ -61,11 +69,156 @@ const PERMISSIONS = [
   { permissionName: "创建权限", permissionCode: "permission:create", permissionType: 1 },
   { permissionName: "编辑权限", permissionCode: "permission:update", permissionType: 1 },
   { permissionName: "删除权限", permissionCode: "permission:delete", permissionType: 1 },
-].map((p) => ({
+];
+
+const API_PERMISSIONS: PermissionSeed[] = [
+  {
+    permissionName: "用户查询接口",
+    permissionCode: "api:user:list",
+    permissionType: 2,
+    resource: "/user",
+    method: "GET",
+  },
+  {
+    permissionName: "用户创建接口",
+    permissionCode: "api:user:create",
+    permissionType: 2,
+    resource: "/user",
+    method: "POST",
+  },
+  {
+    permissionName: "用户更新接口",
+    permissionCode: "api:user:update",
+    permissionType: 2,
+    resource: "/user/*",
+    method: "PUT",
+  },
+  {
+    permissionName: "用户删除接口",
+    permissionCode: "api:user:delete",
+    permissionType: 2,
+    resource: "/user/*",
+    method: "DELETE",
+  },
+  {
+    permissionName: "角色查询接口",
+    permissionCode: "api:role:list",
+    permissionType: 2,
+    resource: "/role",
+    method: "GET",
+  },
+  {
+    permissionName: "角色详情接口",
+    permissionCode: "api:role:detail",
+    permissionType: 2,
+    resource: "/role/*",
+    method: "GET",
+  },
+  {
+    permissionName: "角色创建接口",
+    permissionCode: "api:role:create",
+    permissionType: 2,
+    resource: "/role",
+    method: "POST",
+  },
+  {
+    permissionName: "角色更新接口",
+    permissionCode: "api:role:update",
+    permissionType: 2,
+    resource: "/role/*",
+    method: "PUT",
+  },
+  {
+    permissionName: "角色删除接口",
+    permissionCode: "api:role:delete",
+    permissionType: 2,
+    resource: "/role/*",
+    method: "DELETE",
+  },
+  {
+    permissionName: "菜单查询接口",
+    permissionCode: "api:menu:list",
+    permissionType: 2,
+    resource: "/menu",
+    method: "GET",
+  },
+  {
+    permissionName: "菜单树接口",
+    permissionCode: "api:menu:tree",
+    permissionType: 2,
+    resource: "/menu/tree",
+    method: "GET",
+  },
+  {
+    permissionName: "菜单详情接口",
+    permissionCode: "api:menu:detail",
+    permissionType: 2,
+    resource: "/menu/*",
+    method: "GET",
+  },
+  {
+    permissionName: "菜单创建接口",
+    permissionCode: "api:menu:create",
+    permissionType: 2,
+    resource: "/menu",
+    method: "POST",
+  },
+  {
+    permissionName: "菜单更新接口",
+    permissionCode: "api:menu:update",
+    permissionType: 2,
+    resource: "/menu/*",
+    method: "PUT",
+  },
+  {
+    permissionName: "菜单删除接口",
+    permissionCode: "api:menu:delete",
+    permissionType: 2,
+    resource: "/menu/*",
+    method: "DELETE",
+  },
+  {
+    permissionName: "权限查询接口",
+    permissionCode: "api:permission:list",
+    permissionType: 2,
+    resource: "/permissions",
+    method: "GET",
+  },
+  {
+    permissionName: "权限详情接口",
+    permissionCode: "api:permission:detail",
+    permissionType: 2,
+    resource: "/permissions/*",
+    method: "GET",
+  },
+  {
+    permissionName: "权限创建接口",
+    permissionCode: "api:permission:create",
+    permissionType: 2,
+    resource: "/permissions",
+    method: "POST",
+  },
+  {
+    permissionName: "权限更新接口",
+    permissionCode: "api:permission:update",
+    permissionType: 2,
+    resource: "/permissions/*",
+    method: "PUT",
+  },
+  {
+    permissionName: "权限删除接口",
+    permissionCode: "api:permission:delete",
+    permissionType: 2,
+    resource: "/permissions/*",
+    method: "DELETE",
+  },
+];
+
+const PERMISSIONS = [...BUTTON_PERMISSIONS, ...API_PERMISSIONS].map((p) => ({
   id: uuidv4(),
   ...p,
-  resource: "",
-  method: "",
+  resource: p.resource ?? "",
+  method: p.method ?? "",
   status: 1,
   remark: "",
 }));
@@ -297,7 +450,7 @@ async function seed() {
     // 7. 角色-权限 关联
     //    super_admin: 全部权限
     //    admin:      除 delete 之外的权限
-    //    user:       仅 list 权限
+    //    user:       仅按钮 list 权限（不授予 API 权限）
     console.log("[seed] 关联角色-权限...");
     const superAdminId = findRoleId("super_admin");
     const adminId = findRoleId("admin");
@@ -310,7 +463,7 @@ async function seed() {
       if (!p.permissionCode.endsWith(":delete")) {
         rolePermissionRows.push({ roleId: adminId, permissionId: p.id });
       }
-      if (p.permissionCode.endsWith(":list")) {
+      if (p.permissionType === 1 && p.permissionCode.endsWith(":list")) {
         rolePermissionRows.push({ roleId: userId, permissionId: p.id });
       }
     }

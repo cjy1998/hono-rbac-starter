@@ -25,7 +25,12 @@ import { HTTP_STATUS } from "../utils/const.js";
 import { env } from "../env.js";
 import type { UserPayload } from "../types/hono.js";
 import { HTTPException } from "hono/http-exception";
+import { parseJwtExpiresInSeconds } from "../utils/token.js";
 class UserService {
+  private static readonly PRIVILEGED_ROLE_CODES = new Set([
+    "super_admin",
+    "admin",
+  ]);
   /**
    * 创建用户
    */
@@ -85,7 +90,18 @@ class UserService {
    * 修改密码
    */
   async updatePassword(id: string, dto: UpdatePasswordDTO): Promise<null> {
-    await this.getExistingUserById(id);
+    const existingUser = await this.getExistingUserById(id);
+    if (dto.oldPassword) {
+      const isOldPasswordValid = await argon2.verify(
+        existingUser.password,
+        dto.oldPassword,
+      );
+      if (!isOldPasswordValid) {
+        throw new HTTPException(HTTP_STATUS.BAD_REQUEST, {
+          message: "旧密码不正确",
+        });
+      }
+    }
     const storageHash = await argon2.hash(dto.password);
     await db
       .update(usersTable)
@@ -216,6 +232,14 @@ class UserService {
     });
     return rows;
   }
+  async isPrivilegedUser(userId: string): Promise<boolean> {
+    const userWithRoles = await this.getUserWithRoles(userId);
+    return (
+      userWithRoles?.userRoles.some((ur) =>
+        UserService.PRIVILEGED_ROLE_CODES.has(ur.role.roleCode),
+      ) ?? false
+    );
+  }
   /**
    * 根据邮箱获取用户
    */
@@ -287,7 +311,9 @@ class UserService {
       id: user.id,
       username: user.username,
       email: user.email,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 24小时后过期
+      exp:
+        Math.floor(Date.now() / 1000) +
+        parseJwtExpiresInSeconds(env.JWT_EXPIRES_IN),
     };
     const token = await sign(payload, env.JWT_SECRET);
 

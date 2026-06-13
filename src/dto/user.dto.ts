@@ -58,6 +58,11 @@ export const userQuerySchema = paginationSchema.extend({
 export type UserQueryDTO = z.infer<typeof userQuerySchema>;
 
 export const updatePasswordSchema = z.object({
+  oldPassword: z
+    .string()
+    .min(6, "oldPassword 至少 6 位")
+    .max(50, "oldPassword 最长 50 位")
+    .optional(),
   password: z
     .string()
     .min(6, "password 至少 6 位")

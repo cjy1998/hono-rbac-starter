@@ -5,6 +5,7 @@ import { permissionsTable } from "../db/schema/permissions.js";
 import { roleMenuTable } from "../db/schema/role_menu.js";
 import { rolePermissionTable } from "../db/schema/role_permission.js";
 import { rolesTable } from "../db/schema/roles.js";
+import { userRoleTable } from "../db/schema/user_role.js";
 import { notDeleted, paginate } from "../utils/query.js";
 import type {
   CreateRoleDTO,
@@ -240,6 +241,14 @@ class RoleService {
       });
     }
     return role;
+  }
+
+  async getUserIdsByRoleId(roleId: string): Promise<string[]> {
+    const rows = await db
+      .select({ userId: userRoleTable.userId })
+      .from(userRoleTable)
+      .where(eq(userRoleTable.roleId, roleId));
+    return rows.map((row) => row.userId);
   }
 
   private async ensurePermissionsExist(permissionIds: string[]) {
