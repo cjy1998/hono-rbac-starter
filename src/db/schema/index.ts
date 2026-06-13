@@ -5,6 +5,7 @@ export { menusTable } from "./menus.js";
 export { userRoleTable } from "./user_role.js";
 export { rolePermissionTable } from "./role_permission.js";
 export { roleMenuTable } from "./role_menu.js";
+export { auditLogsTable } from "./audit_log.js";
 
 export {
   usersRelations,

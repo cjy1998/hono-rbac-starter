@@ -212,6 +212,13 @@ const API_PERMISSIONS: PermissionSeed[] = [
     resource: "/permissions/*",
     method: "DELETE",
   },
+  {
+    permissionName: "审计日志查询接口",
+    permissionCode: "api:audit:list",
+    permissionType: 2,
+    resource: "/audit-logs",
+    method: "GET",
+  },
 ];
 
 const PERMISSIONS = [...BUTTON_PERMISSIONS, ...API_PERMISSIONS].map((p) => ({

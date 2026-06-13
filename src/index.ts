@@ -8,6 +8,7 @@ import permissionsController from "./controller/permissions.controller.js";
 import menuController from "./controller/menu.controller.js";
 import roleController from "./controller/role.controller.js";
 import healthController from "./controller/health.controller.js";
+import auditController from "./controller/audit.controller.js";
 import { ValidationException } from "./exceptions/validation.exception.js";
 import { requestLogger } from "./middleware/requestLogger.middleware.js";
 import type { AppEnv } from "./types/hono.js";
@@ -21,6 +22,7 @@ import { pool } from "./db/index.js";
 import { cors } from "hono/cors";
 import { securityHeaders } from "./middleware/securityHeaders.middleware.js";
 import { xssProtection } from "./middleware/xss.middleware.js";
+import { audit } from "./middleware/audit.middleware.js";
 
 // 传入 AppEnv 让 c.set/c.get/c.var 获得强类型
 const app = new Hono<AppEnv>();
@@ -42,6 +44,10 @@ app.use("*", requestLogger);
  * Redis 缓存中间件
  */
 app.use("*", redisMiddleware);
+/**
+ * 审计中间件：记录写操作到 audit_logs
+ */
+app.use("*", audit);
 /**
  * 错误处理
  */
@@ -68,6 +74,7 @@ app.route("/user", userController);
 app.route("/role", roleController);
 app.route("/permissions", permissionsController);
 app.route("/menu", menuController);
+app.route("/audit-logs", auditController);
 
 const server = serve(
   {
